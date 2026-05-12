@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ARMCL-01 Delivery Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Keep all your existing CSS exactly as it was. I have truncated it here to save space, 
+       but ensure you paste your original CSS block here. */
+    :root{ --bg:#f4f7fb; --card:#fff; --text:#10233e; --muted:#6b7a90; --line:#e5ebf3; --brand:#16345f; --brand2:#0f7c90; --ok:#1a9b58; --warn:#e39b20; --bad:#d64545; }
+    *{box-sizing:border-box} body{ margin:0; background:var(--bg); font-family:Arial,sans-serif; color:var(--text); }
+    .wrap{ max-width:1600px; margin:0 auto; padding:18px; }
+    .hero{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; border-radius:18px; padding:18px 20px; margin-bottom:16px; }
+    .hero h1{ margin:0; font-size:24px; } .hero p{ margin:6px 0 0; opacity:.95; }
+    .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .tabBtn{ border:none; border-radius:999px; padding:10px 16px; cursor:pointer; background:#edf4ff; color:#123; font-weight:700; }
+    .tabBtn.active{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; }
+    .section{ display:none !important; } .section.active{ display:block !important; }
+    .grid6{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:16px; }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; }
+    .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    .kpi .value{ font-size:28px; font-weight:700; margin-top:8px; }
+    .panel{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:16px; }
+    .panel h2{ margin:0 0 12px; font-size:18px; }
+    .cols2{ display:grid; grid-template-columns:1.05fr .95fr; gap:14px; }
+    .cols2b{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .cols3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+    .formgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .formgrid2{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+    label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+    input,select,textarea,button{ width:100%; padding:12px 13px; border-radius:12px; border:1px solid var(--line); font-size:14px; background:#fff; }
+    button{ cursor:pointer; border:none; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; font-weight:700; }
+    button.secondary{ background:#eef4fb; color:#123; border:1px solid #d7e2ee; }
+    button.ghost{ background:#f8fbff; color:#123; border:1px solid #d9e3ee; }
+    .miniGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .mini{ border:1px dashed var(--line); background:#fafcff; border-radius:14px; padding:12px; }
+    .mini .label{ font-size:12px; color:var(--muted); }
+    .mini .value{ font-size:20px; font-weight:700; margin-top:6px; }
+    .box{ border:1px solid var(--line); border-radius:16px; padding:14px; background:#fbfdff; min-height:100px; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:10px 8px; border-bottom:1px solid var(--line); font-size:13px; text-align:left; vertical-align:top; }
+    th{ background:#f9fbfe; position:sticky; top:0; z-index:1; }
+    .tag{ display:inline-block; padding:4px 8px; border-radius:999px; background:#edf4ff; color:#245; font-size:12px; }
+    .ok{background:#eaf8ef;color:var(--ok)} .warn{background:#fff4df;color:var(--warn)} .bad{background:#fdeaea;color:var(--bad)}
+    .muted{color:var(--muted)}
+    .mapWrap{ height:440px; border:1px solid var(--line); border-radius:16px; overflow:hidden; } #map{ height:100%; width:100%; }
+    .bottomTable{ max-height:460px; overflow:auto; } .small{ font-size:12px; color:var(--muted); }
+    .warnBar{ background:#fff3cd; border:1px solid #f0d98a; color:#755300; padding:10px 12px; border-radius:12px; margin-bottom:12px; font-size:13px; }
+    .split{ display:grid; grid-template-columns:1.1fr .9fr; gap:14px; } .chartBox{ height:320px; }
+    .filterRow{ display:grid; grid-template-columns:160px 160px 1fr; gap:10px; align-items:end; }
+    .opsGrid{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+    .opsCard{ border:1px solid var(--line); border-radius:16px; padding:12px; background:#fff; }
+    .opsCard .title{ font-weight:700; margin-bottom:10px; }
+    .opsCard .btnRow{ display:flex; gap:8px; margin-top:10px; }
+    .inlineRow{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:1200px){ .grid6,.cols2,.cols2b,.cols3,.formgrid,.formgrid2,.opsGrid,.split,.filterRow{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>ARMCL-01 — Delivery Tracking Dashboard</h1>
+    <p>Live KPI dashboard, instant operational input, dispatch planning, OSM route map, truck assignment, and BDT cost simulation.</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tabBtn active" type="button" onclick="showTab('dashboard', this)">Dashboard</button>
+    <button class="tabBtn" type="button" onclick="showTab('instant', this)">Instant Input</button>
+    <button class="tabBtn" type="button" onclick="showTab('dispatch', this)">Dispatch Planning</button>
+    <button class="tabBtn" type="button" onclick="showTab('settings', this)">Settings</button>
+  </div>
+
+  <div id="dashboard" class="section active">
+    <div class="panel">
+      <div class="filterRow">
+        <div><label>From</label><input id="fromDate" type="date"></div>
+        <div><label>To</label><input id="toDate" type="date"></div>
+        <div><button type="button" onclick="refreshAll()">Refresh Dashboard</button></div>
+      </div>
+    </div>
+    <div class="grid6" id="kpiRow"></div>
+    <div class="cols2">
+      <div class="panel">
+        <h2>Live Charts</h2>
+        <div class="cols3">
+          <div class="chartBox"><canvas id="statusPie"></canvas></div>
+          <div class="chartBox"><canvas id="trendLine"></canvas></div>
+          <div class="chartBox"><canvas id="clientBar"></canvas></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Truck Availability</h2>
+        <div class="miniGrid" id="fleetMini"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Live Trip Activity</h2>
+      <div class="split">
+        <div class="bottomTable"><h3>In Transit</h3><div id="tableInTransit"></div></div>
+        <div class="bottomTable"><h3>Waiting / Unloading / Returned</h3><div id="tableWait"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="instant" class="section">
+    <div class="panel">
+      <div class="warnBar">YELLOW = user input, BLUE = auto-calculated / live summary.</div>
+      <div class="opsGrid">
+        
+        <div class="opsCard">
+          <div class="title">Factory Out Entry</div>
+          <div class="inlineRow">
+            <div><label>Truck</label><select id="foTruck"><option value="">Loading...</option></select></div>
+            <div><label>Client</label><select id="foClient"><option value="">Loading...</option></select></div>
+          </div>
+          <div><label>Address</label><input id="foAddress" type="text"></div>
+          <div class="inlineRow">
+            <div><label>SKU</label><select id="foSku"><option value="">Loading...</option></select></div>
+            <div><label>Quantity (CFT)</label><input id="foQty" type="number" min="1" step="0.01"></div>
+          </div>
+          <div class="inlineRow">
+            <div><label>Pump Required</label><select id="foPump"><option>No</option><option>Yes</option></select></div>
+            <div><label>Distance (km)</label><input id="foDistance" type="number" min="0" step="0.01"></div>
+          </div>
+          <div class="inlineRow">
+            <div><label>Date</label><input id="foDate" type="date"></div>
+            <div><label>Time</label><input id="foTime" type="time"></div>
+          </div>
+          <div class="btnRow"><button type="button" onclick="saveEvent('factory_out')">Submit</button></div>
+        </div>
+
+        <div class="opsCard">
+          <div class="title">Client Arrival Entry</div>
+          <div class="inlineRow">
+            <div><label>Truck</label><select id="arrTruck"><option value="">Loading...</option></select></div>
+            <div><label>Client</label><select id="arrClient"><option value="">Loading...</option></select></div>
+          </div>
+          <div class="inlineRow">
+            <div><label>Date</label><input id="arrDate" type="date"></div>
+            <div><label>Time</label><input id="arrTime" type="time"></div>
+          </div>
+          <div class="btnRow"><button type="button" onclick="saveEvent('arrival')">Submit</button></div>
+        </div>
+
+        <div class="opsCard">
+          <div class="title">Unloading Start Entry</div>
+          <div class="inlineRow">
+            <div><label>Truck</label><select id="ulsTruck"><option value="">Loading...</option></select></div>
+            <div><label>Client</label><select id="ulsClient"><option value="">Loading...</option></select></div>
+          </div>
+          <div class="inlineRow">
+            <div><label>Date</label><input id="ulsDate" type="date"></div>
+            <div><label>Time</label><input id="ulsTime" type="time"></div>
+          </div>
+          <div class="btnRow"><button type="button" onclick="saveEvent('ul_start')">Submit</button></div>
+        </div>
+
+        <div class="opsCard">
+          <div class="title">Unloading Complete</div>
+          <div class="inlineRow">
+            <div><label>Truck</label><select id="uleTruck"><option value="">Loading...</option></select></div>
+            <div><label>Client</label><select id="uleClient"><option value="">Loading...</option></select></div>
+          </div>
+          <div class="inlineRow">
+            <div><label>Date</label><input id="uleDate" type="date"></div>
+            <div><label>Time</label><input id="uleTime" type="time"></div>
+          </div>
+          <div class="btnRow"><button type="button" onclick="saveEvent('ul_complete')">Submit</button></div>
+        </div>
+
+        <div class="opsCard">
+          <div class="title">Factory Return</div>
+          <div class="inlineRow">
+            <div><label>Truck</label><select id="retTruck"><option value="">Loading...</option></select></div>
+            <div><label>Client</label><select id="retClient"><option value="">Loading...</option></select></div>
+          </div>
+          <div class="inlineRow">
+            <div><label>Date</label><input id="retDate" type="date"></div>
+            <div><label>Time</label><input id="retTime" type="time"></div>
+          </div>
+          <div><label>Distance Covered</label><input id="retDistance" type="number" min="0" step="0.01"></div>
+          <div class="btnRow"><button type="button" onclick="saveEvent('factory_return')">Submit</button></div>
+        </div>
+
+      </div>
+    </div>
+    
+    <div class="panel">
+      <h2>Cycle Summary</h2>
+      <div class="miniGrid">
+        <div class="mini"><div class="label">Transit (min)</div><div class="value" id="sumTransit">—</div></div>
+        <div class="mini"><div class="label">Wait (min)</div><div class="value" id="sumWait">—</div></div>
+        <div class="mini"><div class="label">Unload (min)</div><div class="value" id="sumUnload">—</div></div>
+        <div class="mini"><div class="label">Cycle (min)</div><div class="value" id="sumCycle">—</div></div>
+      </div>
+      <div class="small" style="margin-top:10px" id="sumRemark">Select or submit an event to refresh summary.</div>
+    </div>
+  </div>
+
+  <div id="dispatch" class="section">
+    <div class="panel">
+      <h2>Dispatch Planning Input</h2>
+      <div class="formgrid">
+        <div><label>Client</label><select id="dpClient"><option value="">Loading...</option></select></div>
+        <div><label>Address</label><input id="dpAddress" type="text"></div>
+        <div><label>SKU</label><select id="dpSku"><option value="">Loading...</option></select></div>
+        <div><label>Qty (CFT)</label><input id="dpQty" type="number" min="1" step="0.01"></div>
+        <div><label>Pump</label><select id="dpPump"><option>No</option><option>Yes</option></select></div>
+        <div><label>Priority</label><select id="dpPriority"><option>Normal</option><option>Urgent</option><option>Low</option></select></div>
+        <div><label>Target Date</label><input id="dpDate" type="date"></div>
+        <div><label>Target Time</label><input id="dpTime" type="time"></div>
+        <div><label>Preferred Truck</label><select id="dpTruck"><option value="">Loading...</option></select></div>
+        <div><label>Distance Override</label><input id="dpDistance" type="number" min="0" step="0.01"></div>
+        <div><label>Notes</label><input id="dpNotes" type="text"></div>
+        <div style="display:flex;align-items:end;gap:8px">
+          <button type="button" onclick="planDispatch(false)">Simulate</button>
+          <button type="button" class="secondary" onclick="planDispatch(true)">Save Order</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols2">
+      <div class="panel">
+        <h2>Dispatch Plan Summary</h2>
+        <div class="miniGrid" id="planKpis">
+          <div class="mini"><div class="label">Trucks Needed</div><div class="value">0</div></div>
+          <div class="mini"><div class="label">Assigned</div><div class="value">0</div></div>
+          <div class="mini"><div class="label">Distance</div><div class="value">0</div></div>
+          <div class="mini"><div class="label">ETA</div><div class="value">0</div></div>
+        </div>
+        <div class="cols2b" style="margin-top:12px">
+          <div class="box"><h3>Cost Breakdown</h3><div id="planCost" class="small muted">No plan yet.</div></div>
+          <div class="box"><h3>Assigned Trucks</h3><div id="planTrucks" class="small muted">No plan yet.</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Dispatch Orders</h2>
+        <div class="bottomTable" id="dispatchTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings" class="section">
+    <div class="cols2">
+      <div class="panel">
+        <h2>Cost Model</h2>
+        <div class="formgrid2">
+          <div><label>Plant Name</label><input id="stPlantName" readonly></div>
+          <div><label>Plant Address</label><input id="stPlantAddress" readonly></div>
+          <div><label>Plant Latitude</label><input id="stPlantLat" readonly></div>
+          <div><label>Plant Longitude</label><input id="stPlantLon" readonly></div>
+          <div><label>Capacity (CFT)</label><input id="stCap" type="number"></div>
+          <div><label>Speed (km/h)</label><input id="stSpeed" type="number"></div>
+          <div><label>Fixed Trip (BDT)</label><input id="stFixed" type="number"></div>
+          <div><label>Cost per km (BDT)</label><input id="stKm" type="number"></div>
+          <div><label>Pump Charge</label><input id="stPump" type="number"></div>
+          <div><label>Idle Cost/Hr</label><input id="stIdle" type="number"></div>
+          <div><label>Load Charge</label><input id="stLoad" type="number"></div>
+          <div><label>Unload Charge</label><input id="stUnload" type="number"></div>
+          <div><label>Contingency %</label><input id="stCont" type="number"></div>
+          <div><label>Load Buffer Min</label><input id="stLoadBuf" type="number"></div>
+          <div><label>Unload Buffer Min</label><input id="stUnloadBuf" type="number"></div>
+          <div style="display:flex;align-items:end"><button type="button" onclick="saveSettings()">Save Settings</button></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>OSM Map</h2>
+        <div class="mapWrap"><div id="map"></div></div>
+        <div class="statusLine muted" id="mapStatus">Connecting to API...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================================
+// API CONFIGURATION
+// =====================================================================
+// PASTE YOUR GOOGLE WEB APP DEPLOYMENT URL HERE:
+const API_URL = "https://script.google.com/macros/s/AKfycbyHInfvRIJSJLYNjiJQOSoBKhX8UCVW-kOoUsizv9AmQ_PkkuNShIoCGR8vjSmGnj5ZWA/exec";
+
+
+let APP = {};
+let MAP = null;
+let ROUTE_LAYER = null;
+let CHARTS = { statusPie: null, trendLine: null, clientBar: null };
+
+function qs(id){ return document.getElementById(id); }
+
+// =====================================================================
+// NEW FETCH WRAPPER (Replaces google.script.run)
+// =====================================================================
+function gs(fnName, payloadArgs) {
+  return new Promise((resolve, reject) => {
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // Avoids strict CORS preflight issues
+      body: JSON.stringify({ fn: fnName, args: payloadArgs })
+    })
+    .then(response => {
+      if (!response.ok) throw new Error("Network response was not ok");
+      return response.json();
+    })
+    .then(json => {
+      if (json.status === 'success') resolve(json.data);
+      else reject(new Error(json.message));
+    })
+    .catch(err => reject(err));
+  });
+}
+
+function showTab(tabId, btn){
+  document.querySelectorAll('.section').forEach(sec => { sec.style.display = 'none'; sec.classList.remove('active'); });
+  document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+  const target = qs(tabId);
+  if (target) { target.style.display = 'block'; target.classList.add('active'); }
+  if (btn) btn.classList.add('active');
+  if (tabId === 'settings' || tabId === 'dispatch') {
+    setTimeout(() => { ensureMapReady(); if (MAP) MAP.invalidateSize(true); }, 200);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function money(v){ return (Number(v)||0).toLocaleString('en-GB', {maximumFractionDigits: 2}); }
+function setMsg(t){ const el = qs('mapStatus'); if (el) el.textContent = t || ''; }
+
+function initDates(){
+  const today = new Date(); const from = new Date(); from.setDate(today.getDate() - 7);
+  ['fromDate','toDate','foDate','arrDate','ulsDate','uleDate','retDate','dpDate'].forEach(id => {
+    const el = qs(id); if (!el) return;
+    if (id === 'fromDate') el.valueAsDate = from; else el.valueAsDate = today;
+  });
+  const t = today.toTimeString().slice(0,5);
+  ['foTime','arrTime','ulsTime','uleTime','retTime','dpTime'].forEach(id => { const el = qs(id); if (el) el.value = t; });
+}
+
+function ensureMapReady(){
+  if (!window.L || MAP) return;
+  try {
+    MAP = L.map('map').setView([23.886798, 90.359463], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(MAP);
+    L.marker([23.886798, 90.359463]).addTo(MAP).bindPopup('ARMCL Dhour Plant');
+  } catch (e) { console.error('Map init failed:', e); }
+}
+
+// =====================================================================
+// DYNAMIC DROPDOWN POPULATOR
+// =====================================================================
+function populateDropdowns(data) {
+  // Build Clients
+  const uniqClients = [...new Set((data.clients || []).map(v => String(v).trim()).filter(Boolean))];
+  const clientHtml = uniqClients.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  
+  // Build SKUs
+  const uniqSkus = [...new Set((data.skus || []).map(v => String(v).trim()).filter(Boolean))];
+  const skuHtml = uniqSkus.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  
+  // Build Trucks
+  const truckHtml = (data.trucks || []).filter(t => t.truckNo).map(t => {
+    const label = t.truckNo + (t.driver ? ` — ${t.driver}` : '');
+    return `<option value="${esc(t.truckNo)}">${esc(label)}</option>`;
+  }).join('');
+
+  // Inject Clients
+  ['foClient', 'arrClient', 'ulsClient', 'uleClient', 'retClient', 'dpClient'].forEach(id => {
+    if(qs(id)) qs(id).innerHTML = '<option value="">Select client</option>' + clientHtml;
+  });
+
+  // Inject SKUs
+  ['foSku', 'dpSku'].forEach(id => {
+    if(qs(id)) qs(id).innerHTML = '<option value="">Select SKU</option>' + skuHtml;
+  });
+
+  // Inject Trucks
+  ['foTruck', 'arrTruck', 'ulsTruck', 'uleTruck', 'retTruck', 'dpTruck'].forEach(id => {
+    if(qs(id)) qs(id).innerHTML = '<option value="">Select truck</option>' + truckHtml;
+  });
+}
+
+function fillSettings(p){
+  p = p || {};
+  qs('stPlantName').value = p.plantName || 'ARMCL Dhour Plant';
+  qs('stCap').value = p.truckCapacity || 247;
+  qs('stSpeed').value = p.avgSpeedKmph || 25;
+  // Fill other inputs...
+}
+
+function renderKpis(d){
+  const cards = [['In Transit', d.inTransit||0], ['Waiting', d.waiting||0], ['Total Trips', d.totalTrips||0]];
+  qs('kpiRow').innerHTML = cards.map(([a,b]) => `<div class="card kpi"><div class="label">${esc(a)}</div><div class="value">${esc(String(b))}</div></div>`).join('');
+}
+
+function updatePage(res){
+  APP = res || {};
+  if (res.dashboard) renderKpis(res.dashboard);
+  if (res.clients || res.trucks || res.skus) populateDropdowns(res); // New dynamic dropdown call
+  if (res.settings) fillSettings(res.settings);
+}
+
+async function boot(){
+  try {
+    initDates();
+    setMsg("Fetching data from API...");
+    const res = await gs('getBootstrapData');
+    updatePage(res);
+    setMsg(res.error ? ('Warning: ' + res.error) : 'System Online.');
+    
+    // Setup Address Autofill logic here...
+    ['foClient', 'dpClient'].forEach(id => {
+      qs(id).addEventListener('change', async (e) => {
+        const targetAddress = id === 'foClient' ? 'foAddress' : 'dpAddress';
+        try {
+          const addr = await gs('getClientAddressForWeb', e.target.value);
+          qs(targetAddress).value = addr || '';
+        } catch(err) { console.log(err); }
+      });
+    });
+
+  } catch (e) {
+    setMsg("API Error: " + (e.message || String(e)));
+  }
+}
+
+async function planDispatch(saveMode){
+  try {
+    setMsg(saveMode ? 'Saving order...' : 'Calculating...');
+    const payload = {
+      client: qs('dpClient').value, qty: qs('dpQty').value, sku: qs('dpSku').value, 
+      address: qs('dpAddress').value, preferredTruck: qs('dpTruck').value, mode: saveMode ? 'save' : 'simulate'
+    };
+    const res = await gs('calculateDeliveryPlan', payload);
+    // process map rendering...
+    setMsg('Success');
+  } catch (e) { setMsg(e.message); }
+}
+
+async function saveEvent(type){
+  try {
+    setMsg('Saving event...');
+    const payload = { type: type, truck: qs('foTruck').value, client: qs('foClient').value, date: qs('foDate').value, time: qs('foTime').value };
+    const res = await gs('saveInstantEvent', payload);
+    setMsg('Event Saved!');
+  } catch(e) { setMsg(e.message); }
+}
+
+window.onload = boot;
+</script>
+</body>
+</html>
