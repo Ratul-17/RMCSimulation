@@ -281,8 +281,7 @@
 // API CONFIGURATION
 // =====================================================================
 // PASTE YOUR GOOGLE WEB APP DEPLOYMENT URL HERE:
-const API_URL = "https://script.google.com/macros/s/AKfycbz-ranQyVPraD6NagCttCbyEseHvr7q-SE0J-f-PeYX_7Jif_DN-GLG2PSU4RHt2sJ_/exec";
-
+const API_URL = "https://script.google.com/macros/s/YOUR_URL_ID_HERE/exec";
 
 let APP = {};
 let MAP = null;
@@ -298,7 +297,7 @@ function gs(fnName, payloadArgs) {
   return new Promise((resolve, reject) => {
     fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' }, // Avoids strict CORS preflight issues
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ fn: fnName, args: payloadArgs })
     })
     .then(response => {
@@ -326,7 +325,8 @@ function showTab(tabId, btn){
 }
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function money(v){ return (Number(v)||0).toLocaleString('en-GB', {maximumFractionDigits: 2}); }
+function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
+function money(v){ return num(v).toLocaleString('en-GB', {maximumFractionDigits: 2}); }
 function setMsg(t){ const el = qs('mapStatus'); if (el) el.textContent = t || ''; }
 
 function initDates(){
@@ -342,41 +342,35 @@ function initDates(){
 function ensureMapReady(){
   if (!window.L || MAP) return;
   try {
-    MAP = L.map('map').setView([23.886798, 90.359463], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(MAP);
-    L.marker([23.886798, 90.359463]).addTo(MAP).bindPopup('ARMCL Dhour Plant');
+    MAP = L.map('map').setView([23.886798363152327, 90.35946324417702], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(MAP);
+    L.marker([23.886798363152327, 90.35946324417702]).addTo(MAP).bindPopup('ARMCL Dhour Plant');
   } catch (e) { console.error('Map init failed:', e); }
 }
 
 // =====================================================================
-// DYNAMIC DROPDOWN POPULATOR
+// UI RENDERING & DROPDOWNS
 // =====================================================================
 function populateDropdowns(data) {
-  // Build Clients
   const uniqClients = [...new Set((data.clients || []).map(v => String(v).trim()).filter(Boolean))];
   const clientHtml = uniqClients.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
   
-  // Build SKUs
   const uniqSkus = [...new Set((data.skus || []).map(v => String(v).trim()).filter(Boolean))];
   const skuHtml = uniqSkus.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
   
-  // Build Trucks
   const truckHtml = (data.trucks || []).filter(t => t.truckNo).map(t => {
     const label = t.truckNo + (t.driver ? ` — ${t.driver}` : '');
     return `<option value="${esc(t.truckNo)}">${esc(label)}</option>`;
   }).join('');
 
-  // Inject Clients
   ['foClient', 'arrClient', 'ulsClient', 'uleClient', 'retClient', 'dpClient'].forEach(id => {
     if(qs(id)) qs(id).innerHTML = '<option value="">Select client</option>' + clientHtml;
   });
 
-  // Inject SKUs
   ['foSku', 'dpSku'].forEach(id => {
     if(qs(id)) qs(id).innerHTML = '<option value="">Select SKU</option>' + skuHtml;
   });
 
-  // Inject Trucks
   ['foTruck', 'arrTruck', 'ulsTruck', 'uleTruck', 'retTruck', 'dpTruck'].forEach(id => {
     if(qs(id)) qs(id).innerHTML = '<option value="">Select truck</option>' + truckHtml;
   });
@@ -385,23 +379,236 @@ function populateDropdowns(data) {
 function fillSettings(p){
   p = p || {};
   qs('stPlantName').value = p.plantName || 'ARMCL Dhour Plant';
+  qs('stPlantAddress').value = p.plantAddress || 'Dhour Plant, Dhaka, Bangladesh';
+  qs('stPlantLat').value = p.plantLat || '23.886798363152327';
+  qs('stPlantLon').value = p.plantLon || '90.35946324417702';
   qs('stCap').value = p.truckCapacity || 247;
   qs('stSpeed').value = p.avgSpeedKmph || 25;
-  // Fill other inputs...
+  qs('stFixed').value = p.fixedTripBDT || 0;
+  qs('stKm').value = p.perKmBDT || 0;
+  qs('stPump').value = p.pumpChargeBDT || 0;
+  qs('stLoad').value = p.loadingChargeBDT || 0;
+  qs('stUnload').value = p.unloadingChargeBDT || 0;
+  qs('stIdle').value = p.idleCostPerHourBDT || 0;
+  qs('stCont').value = p.contingencyPct || 0;
+  qs('stLoadBuf').value = p.loadingBufferMin || 20;
+  qs('stUnloadBuf').value = p.unloadingBufferMin || 30;
+}
+
+function statusClass(s){
+  s = String(s || '');
+  if (s === 'Completed' || s === 'Returned & Available') return 'ok';
+  if (s === 'In Transit' || s === 'Waiting For Unload' || s === 'Unloading' || s === 'Scheduled') return 'warn';
+  if (s === 'Breakdown') return 'bad';
+  return '';
 }
 
 function renderKpis(d){
-  const cards = [['In Transit', d.inTransit||0], ['Waiting', d.waiting||0], ['Total Trips', d.totalTrips||0]];
+  const cards = [
+    ['In Transit', d.inTransit || 0], ['Waiting For Unload', d.waiting || 0], ['Currently Unloading', d.unloading || 0],
+    ['Completed Today', d.completedToday || 0], ['Breakdown', d.breakdown || 0], ['Total Trips', d.totalTrips || 0],
+    ['Avg Transit', d.avgTransit || 0], ['Avg Wait', d.avgWait || 0], ['Avg Unload', d.avgUnload || 0],
+    ['Avg Cycle', d.avgCycle || 0], ['Total CFT', d.totalCft || 0], ['SMV Efficiency', (d.smvEfficiency || 0) + '%']
+  ];
   qs('kpiRow').innerHTML = cards.map(([a,b]) => `<div class="card kpi"><div class="label">${esc(a)}</div><div class="value">${esc(String(b))}</div></div>`).join('');
+}
+
+function fleetMini(data){
+  data = data || {};
+  const trucks = Array.isArray(data.trucks) ? data.trucks : [];
+  const available = Array.isArray(data.availableTrucks) ? data.availableTrucks : [];
+  const total = trucks.length;
+  const avail = available.filter(t => t && t.available).length;
+  const active = trucks.filter(t => t && t.status === 'Active').length;
+  const busy = Math.max(0, active - avail);
+  qs('fleetMini').innerHTML = `
+    <div class="mini"><div class="label">Active</div><div class="value">${active}</div></div>
+    <div class="mini"><div class="label">Available</div><div class="value">${avail}</div></div>
+    <div class="mini"><div class="label">Busy</div><div class="value">${busy}</div></div>
+    <div class="mini"><div class="label">Total Fleet</div><div class="value">${total}</div></div>
+  `;
+}
+
+function renderTable(container, rows){
+  if (!rows || !rows.length) { qs(container).innerHTML = '<div class="small muted">No rows found.</div>'; return; }
+  const html = `<table><thead><tr><th>Truck</th><th>Client</th><th>SKU</th><th>Qty</th><th>FO</th><th>Arrival</th><th>UL Start</th><th>UL End</th><th>Cycle</th><th>Status</th><th>Remarks</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${esc(r.truck || '')}</td><td>${esc(r.client || '')}</td><td>${esc(r.sku || '')}</td><td>${money(r.qty || 0)}</td><td>${esc(r.fo || '')}</td><td>${esc(r.arrival || '')}</td><td>${esc(r.uls || '')}</td><td>${esc(r.ule || '')}</td><td>${esc(r.cycle || '')}</td><td><span class="tag ${statusClass(r.status)}">${esc(r.status || '')}</span></td><td>${esc(r.remarks || '')}</td></tr>`).join('')}
+  </tbody></table>`;
+  qs(container).innerHTML = html;
+}
+
+function renderDispatchTable(rows){
+  if (!rows || !rows.length) { qs('dispatchTable').innerHTML = '<div class="small muted">No dispatch orders yet.</div>'; return; }
+  qs('dispatchTable').innerHTML = `<table><thead><tr><th>Order ID</th><th>Client</th><th>Qty</th><th>Trucks</th><th>Priority</th><th>Distance</th><th>Status</th><th>Assigned</th><th>Action</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${esc(r.orderId || '')}</td><td>${esc(r.client || '')}</td><td>${money(r.qty || 0)}</td><td>${esc(r.trucksRequired || '')}</td><td>${esc(r.priority || '')}</td><td>${money(r.distanceKm || 0)}</td><td><span class="tag ${statusClass(r.status)}">${esc(r.status || '')}</span></td><td>${esc(r.assignedTrucks || '')}</td><td><button type="button" class="ghost" onclick="dispatchNow('${esc(r.orderId)}')">Dispatch Now</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderCharts(chartsData){
+  const statusPie = (chartsData && chartsData.statusPie) || {};
+  const trend = (chartsData && chartsData.trendLine) || {};
+  const client = (chartsData && chartsData.clientBar) || {};
+
+  if (CHARTS.statusPie) CHARTS.statusPie.destroy();
+  if (CHARTS.trendLine) CHARTS.trendLine.destroy();
+  if (CHARTS.clientBar) CHARTS.clientBar.destroy();
+
+  CHARTS.statusPie = new Chart(qs('statusPie').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(statusPie), datasets: [{ data: Object.keys(statusPie).map(k => statusPie[k]) }] }, options: { responsive: true, maintainAspectRatio: false } });
+  CHARTS.trendLine = new Chart(qs('trendLine').getContext('2d'), { type: 'line', data: { labels: trend.labels || [], datasets: [ { label: 'Avg Cycle', data: trend.cycleVals || [] }, { label: 'Qty', data: trend.qtyVals || [] } ] }, options: { responsive: true, maintainAspectRatio: false } });
+  CHARTS.clientBar = new Chart(qs('clientBar').getContext('2d'), { type: 'bar', data: { labels: client.labels || [], datasets: [{ label: 'Qty', data: client.qtyVals || [] }] }, options: { responsive: true, maintainAspectRatio: false } });
+}
+
+function renderOperations(tables){
+  tables = tables || {};
+  renderTable('tableInTransit', tables.inTransit || []);
+  const mix = [].concat(tables.waiting || []).concat(tables.unloading || []).concat(tables.returned || []).concat(tables.delayed || []);
+  renderTable('tableWait', mix);
+  renderTable('opsTableA', (tables.waiting || []).concat(tables.unloading || []));
+  renderTable('opsTableB', (tables.returned || []).concat(tables.delayed || []));
 }
 
 function updatePage(res){
   APP = res || {};
   if (res.dashboard) renderKpis(res.dashboard);
-  if (res.clients || res.trucks || res.skus) populateDropdowns(res); // New dynamic dropdown call
+  if (res.clients || res.trucks || res.skus) populateDropdowns(res); 
+  if (res.trucks || res.availableTrucks) fleetMini(res);
+  if (res.dispatchOrders) renderDispatchTable(res.dispatchOrders);
+  if (res.charts) renderCharts(res.charts);
+  if (res.liveTables) renderOperations(res.liveTables);
   if (res.settings) fillSettings(res.settings);
 }
 
+// =====================================================================
+// MAP & SIMULATION RENDERING
+// =====================================================================
+function updateMap(plan){
+  if (!MAP) return;
+  try {
+    const origin = plan.routeOrigin;
+    const dest = plan.routeDestination;
+
+    if (ROUTE_LAYER) { MAP.removeLayer(ROUTE_LAYER); ROUTE_LAYER = null; }
+    if (!origin || !dest || !plan.routeCoords || !plan.routeCoords.length || origin.lat == null || dest.lat == null) {
+      qs('mapStatus').innerHTML = '<span class="tag warn">Route not available</span>'; return;
+    }
+
+    ROUTE_LAYER = L.polyline(plan.routeCoords, { weight: 5 }).addTo(MAP);
+    L.marker([origin.lat, origin.lon]).addTo(MAP).bindPopup('ARMCL Dhour Plant');
+    L.marker([dest.lat, dest.lon]).addTo(MAP).bindPopup('Destination');
+    MAP.fitBounds(ROUTE_LAYER.getBounds(), { padding: [25, 25] });
+
+    qs('mapStatus').innerHTML = `<span class="tag ok">Distance: ${money(plan.distanceKm)} km</span> <span class="tag ok">ETA: ${plan.etaMin} min</span>`;
+  } catch (e) { qs('mapStatus').innerHTML = `<span class="tag bad">Map error: ${esc(e.message || e)}</span>`; }
+}
+
+function renderPlan(plan){
+  const p = plan || {};
+  qs('planKpis').innerHTML = `
+    <div class="mini"><div class="label">Trucks Needed</div><div class="value">${p.requiredTrucks || 0}</div></div>
+    <div class="mini"><div class="label">Assigned</div><div class="value">${p.assignedTrucks || 0}</div></div>
+    <div class="mini"><div class="label">Distance</div><div class="value">${money(p.distanceKm || 0)}</div></div>
+    <div class="mini"><div class="label">ETA</div><div class="value">${p.etaMin || 0}</div></div>
+  `;
+
+  const c = p.plannedCost || {};
+  qs('planCost').innerHTML = `
+    <div><b>Route source:</b> ${esc(p.source || '')}</div>
+    <div><b>Fixed:</b> BDT ${money(c.fixed)}</div>
+    <div><b>Road:</b> BDT ${money(c.road)}</div>
+    <div><b>Pump:</b> BDT ${money(c.pump)}</div>
+    <div><b>Loading:</b> BDT ${money(c.loading)}</div>
+    <div><b>Unloading:</b> BDT ${money(c.unloading)}</div>
+    <div><b>Time cost:</b> BDT ${money(c.time)}</div>
+    <div><b>Contingency:</b> BDT ${money(c.contingency)}</div>
+    <div style="margin-top:8px"><b>Total:</b> BDT ${money(c.total)}</div>
+    <div><b>Cost / CFT:</b> BDT ${money(c.perCft)}</div>
+    ${p.remainingQty > 0 ? `<div style="color:#b45309;margin-top:8px"><b>Shortfall:</b> ${money(p.remainingQty)} CFT</div>` : ''}
+  `;
+
+  qs('planTrucks').innerHTML = (p.assignedTrucksList || []).length ? `
+    <table><thead><tr><th>Truck</th><th>Driver</th><th>Load</th><th>Reg</th></tr></thead><tbody>
+    ${(p.assignedTrucksList || []).map(t => `<tr><td>${esc(t.truckNo || '')}</td><td>${esc(t.driver || '')}</td><td>${money(t.load || 0)}</td><td>${esc(t.reg || '')}</td></tr>`).join('')}
+    </tbody></table>
+  ` : '<div class="small muted">No trucks assigned.</div>';
+  updateMap(p);
+}
+
+// =====================================================================
+// DATA COLLECTION & API CALLS
+// =====================================================================
+function selectedPayloadFor(type){
+  if (type === 'factory_out') return { type: type, truck: qs('foTruck').value, client: qs('foClient').value, sku: qs('foSku').value, qty: qs('foQty').value, pump: qs('foPump').value, date: qs('foDate').value, time: qs('foTime').value, distanceKm: qs('foDistance').value, remarks: 'Factory out from webapp' };
+  if (type === 'arrival') return { type: type, truck: qs('arrTruck').value, client: qs('arrClient').value, date: qs('arrDate').value, time: qs('arrTime').value, remarks: 'Arrival recorded from webapp' };
+  if (type === 'ul_start') return { type: type, truck: qs('ulsTruck').value, client: qs('ulsClient').value, date: qs('ulsDate').value, time: qs('ulsTime').value, remarks: 'Unloading started from webapp' };
+  if (type === 'ul_complete') return { type: type, truck: qs('uleTruck').value, client: qs('uleClient').value, date: qs('uleDate').value, time: qs('uleTime').value, remarks: 'Unloading complete from webapp' };
+  if (type === 'factory_return') return { type: type, truck: qs('retTruck').value, client: qs('retClient').value, date: qs('retDate').value, time: qs('retTime').value, distanceKm: qs('retDistance').value, remarks: 'Factory return from webapp' };
+  return {};
+}
+
+async function saveEvent(type){
+  try {
+    setMsg('Saving event...');
+    const payload = selectedPayloadFor(type);
+    const res = await gs('saveInstantEvent', payload);
+    updatePage(res);
+    
+    qs('sumTransit').textContent = '—'; qs('sumWait').textContent = '—'; qs('sumUnload').textContent = '—'; qs('sumCycle').textContent = '—'; 
+    qs('sumRemark').textContent = 'Saved. Use Refresh Dashboard for latest summaries.';
+    setMsg('Event Saved!');
+  } catch(e) { setMsg(e.message); }
+}
+
+async function planDispatch(saveMode){
+  try {
+    setMsg(saveMode ? 'Saving dispatch order...' : 'Calculating dispatch plan...');
+    const payload = {
+      client: qs('dpClient').value, address: qs('dpAddress').value, sku: qs('dpSku').value,
+      qty: qs('dpQty').value, pump: qs('dpPump').value, priority: qs('dpPriority').value,
+      planDate: qs('dpDate').value, planTime: qs('dpTime').value, preferredTruck: qs('dpTruck').value,
+      distanceOverrideKm: qs('dpDistance').value, notes: qs('dpNotes').value, mode: saveMode ? 'save' : 'simulate'
+    };
+    const res = await gs('calculateDeliveryPlan', payload);
+    updatePage(res);
+    renderPlan(res);
+    setMsg(saveMode && res.orderId ? `Saved order ${res.orderId}` : 'Dispatch plan ready.');
+  } catch (e) { setMsg(e.message || String(e)); }
+}
+
+async function dispatchNow(orderId){
+  try {
+    setMsg('Dispatching...');
+    const res = await gs('dispatchOrderNow', orderId);
+    updatePage(res);
+    setMsg(res.message || 'Dispatched.');
+  } catch (e) { setMsg(e.message || String(e)); }
+}
+
+async function saveSettings(){
+  try {
+    setMsg('Saving settings...');
+    const payload = {
+      truckCapacity: qs('stCap').value, avgSpeedKmph: qs('stSpeed').value, fixedTripBDT: qs('stFixed').value, perKmBDT: qs('stKm').value, pumpChargeBDT: qs('stPump').value,
+      loadingChargeBDT: qs('stLoad').value, unloadingChargeBDT: qs('stUnload').value, idleCostPerHourBDT: qs('stIdle').value, contingencyPct: qs('stCont').value,
+      loadingBufferMin: qs('stLoadBuf').value, unloadingBufferMin: qs('stUnloadBuf').value
+    };
+    const res = await gs('saveCostSettings', payload);
+    updatePage(res);
+    setMsg('Settings saved.');
+  } catch (e) { setMsg(e.message || String(e)); }
+}
+
+async function refreshAll(){
+  try {
+    setMsg('Refreshing...');
+    const res = await gs('getBootstrapData');
+    updatePage(res);
+    setMsg(APP.error ? ('Loaded with warning: ' + APP.error) : 'Dashboard refreshed.');
+  } catch (e) { setMsg(e.message || String(e)); }
+}
+
+// =====================================================================
+// INITIALIZATION
+// =====================================================================
 async function boot(){
   try {
     initDates();
@@ -410,7 +617,6 @@ async function boot(){
     updatePage(res);
     setMsg(res.error ? ('Warning: ' + res.error) : 'System Online.');
     
-    // Setup Address Autofill logic here...
     ['foClient', 'dpClient'].forEach(id => {
       qs(id).addEventListener('change', async (e) => {
         const targetAddress = id === 'foClient' ? 'foAddress' : 'dpAddress';
@@ -421,34 +627,21 @@ async function boot(){
       });
     });
 
-  } catch (e) {
-    setMsg("API Error: " + (e.message || String(e)));
-  }
-}
+    showTab('dashboard', document.querySelector('.tabBtn.active'));
+    qs('fromDate').addEventListener('change', refreshAll);
+    qs('toDate').addEventListener('change', refreshAll);
+    setInterval(refreshAll, 60000);
 
-async function planDispatch(saveMode){
-  try {
-    setMsg(saveMode ? 'Saving order...' : 'Calculating...');
-    const payload = {
-      client: qs('dpClient').value, qty: qs('dpQty').value, sku: qs('dpSku').value, 
-      address: qs('dpAddress').value, preferredTruck: qs('dpTruck').value, mode: saveMode ? 'save' : 'simulate'
-    };
-    const res = await gs('calculateDeliveryPlan', payload);
-    // process map rendering...
-    setMsg('Success');
-  } catch (e) { setMsg(e.message); }
-}
-
-async function saveEvent(type){
-  try {
-    setMsg('Saving event...');
-    const payload = { type: type, truck: qs('foTruck').value, client: qs('foClient').value, date: qs('foDate').value, time: qs('foTime').value };
-    const res = await gs('saveInstantEvent', payload);
-    setMsg('Event Saved!');
-  } catch(e) { setMsg(e.message); }
+  } catch (e) { setMsg("API Error: " + (e.message || String(e))); }
 }
 
 window.onload = boot;
+window.showTab = showTab;
+window.planDispatch = planDispatch;
+window.saveEvent = saveEvent;
+window.dispatchNow = dispatchNow;
+window.saveSettings = saveSettings;
+window.refreshAll = refreshAll;
 </script>
 </body>
 </html>
