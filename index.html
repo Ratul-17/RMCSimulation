@@ -10,42 +10,63 @@
 
   <style>
     :root{ --bg:#f4f7fb; --card:#fff; --text:#10233e; --muted:#6b7a90; --line:#e5ebf3; --brand:#16345f; --brand2:#0f7c90; --ok:#1a9b58; --warn:#e39b20; --bad:#d64545; }
-    *{box-sizing:border-box} body{ margin:0; background:var(--bg); font-family:Arial,sans-serif; color:var(--text); }
-    .wrap{ max-width:1600px; margin:0 auto; padding:18px; }
-    .hero{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; border-radius:18px; padding:18px 20px; margin-bottom:16px; box-shadow:0 12px 28px rgba(16,35,62,.12); }
-    .hero h1{ margin:0; font-size:24px; } .hero p{ margin:6px 0 0; opacity:.95; }
-    .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-    .tabBtn{ border:none; border-radius:999px; padding:10px 16px; cursor:pointer; background:#edf4ff; color:#123; font-weight:700; }
-    .tabBtn.active{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; }
+    *{box-sizing:border-box} 
+    body{ margin:0; background:var(--bg); font-family:Arial,sans-serif; color:var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    
+    /* --- NEW APP LAYOUT --- */
+    .top-header { display: flex; align-items: center; background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #fff; padding: 15px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0; }
+    .hamburger { background: transparent; border: none; color: #fff; font-size: 24px; cursor: pointer; margin-right: 15px; padding: 0; display: none; }
+    .top-header h1 { margin: 0; font-size: 20px; }
+    .top-header p { margin: 4px 0 0; opacity: 0.9; font-size: 13px; }
+
+    .app-container { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 280px; background: #fff; border-right: 1px solid var(--line); padding: 20px; overflow-y: auto; flex-shrink: 0; transition: transform 0.3s ease; z-index: 9; }
+    .main-content { flex: 1; overflow-y: auto; padding: 20px; background: var(--bg); }
+    .wrap { max-width: 1400px; margin: 0 auto; }
+    
+    .tabs { display: flex; flex-direction: column; gap: 10px; }
+    .tabBtn { border: none; border-radius: 10px; padding: 14px 16px; cursor: pointer; background: transparent; color: var(--text); font-weight: 700; text-align: left; transition: all 0.2s; }
+    .tabBtn:hover { background: #f4f7fb; }
+    .tabBtn.active { background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #fff; box-shadow: 0 4px 10px rgba(15,124,144,0.3); }
+
+    @media (max-width: 900px) {
+      .hamburger { display: block; }
+      .sidebar { position: fixed; left: 0; top: 76px; bottom: 0; transform: translateX(-100%); box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+      .sidebar.open { transform: translateX(0); }
+    }
+    /* ---------------------- */
+
     .section{ display:none !important; } .section.active{ display:block !important; }
     .grid6{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:16px; }
     .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:0 8px 18px rgba(16,35,62,.05); }
     .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
     .kpi .value{ font-size:28px; font-weight:700; margin-top:8px; }
-    .panel{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:16px; box-shadow:0 8px 18px rgba(16,35,62,.05); }
-    .panel h2{ margin:0 0 12px; font-size:18px; border-bottom:1px solid var(--line); padding-bottom:10px;}
-    .cols2{ display:grid; grid-template-columns:1.05fr .95fr; gap:14px; }
+    .panel{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; margin-bottom:16px; box-shadow:0 8px 18px rgba(16,35,62,.05); }
+    .panel h2{ margin:0 0 16px; font-size:18px; border-bottom:1px solid var(--line); padding-bottom:10px;}
+    .cols2{ display:grid; grid-template-columns:1.05fr .95fr; gap:20px; }
     .cols2b{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .cols3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
-    .formgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .formgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
     .formgrid2{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
     label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; font-weight:bold; text-transform:uppercase; }
-    input,select,textarea,button{ width:100%; padding:12px 13px; border-radius:12px; border:1px solid var(--line); font-size:14px; background:#fff; outline:none; }
+    input,select,textarea,button{ width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line); font-size:14px; background:#fff; outline:none; }
+    input:focus, select:focus{ border-color:var(--brand2); }
     button{ cursor:pointer; border:none; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; font-weight:700; }
-    button.secondary{ background:#eef4fb; color:#123; border:1px solid #d7e2ee; }
-    button.ghost{ background:#f8fbff; color:#123; border:1px solid #d9e3ee; }
+    button:disabled{ opacity:0.6; cursor:not-allowed;}
+    .secondary{ background:#eef4fb; color:#123; border:1px solid #d7e2ee; }
+    .ghost{ background:#f8fbff; color:#123; border:1px solid #d9e3ee; }
     .miniGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
     .mini{ border:1px dashed var(--line); background:#fafcff; border-radius:14px; padding:12px; }
     .mini .label{ font-size:12px; color:var(--muted); }
     .mini .value{ font-size:20px; font-weight:700; margin-top:6px; }
     .box{ border:1px solid var(--line); border-radius:16px; padding:14px; background:#fbfdff; min-height:100px; }
     table{ width:100%; border-collapse:collapse; }
-    th,td{ padding:10px 8px; border-bottom:1px solid var(--line); font-size:13px; text-align:left; vertical-align:top; }
+    th,td{ padding:12px 8px; border-bottom:1px solid var(--line); font-size:13px; text-align:left; vertical-align:top; }
     th{ background:#f9fbfe; position:sticky; top:0; z-index:1; }
     .tag{ display:inline-block; padding:4px 8px; border-radius:999px; background:#edf4ff; color:#245; font-size:12px; }
     .ok{background:#eaf8ef;color:var(--ok)} .warn{background:#fff4df;color:var(--warn)} .bad{background:#fdeaea;color:var(--bad)}
     .muted{color:var(--muted)}
-    .mapWrap{ height:400px; border:1px solid var(--line); border-radius:16px; overflow:hidden; } #map{ height:100%; width:100%; }
+    .mapWrap{ height:400px; border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:10px; } #map{ height:100%; width:100%; }
     .bottomTable{ max-height:460px; overflow:auto; } .small{ font-size:12px; color:var(--muted); }
     .split{ display:grid; grid-template-columns:1.1fr .9fr; gap:14px; } .chartBox{ height:280px; }
     .assign-row{ display:grid; grid-template-columns: 1.5fr 1.5fr 1fr; gap:10px; padding:12px; background:#f9fbfe; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; align-items:center;}
@@ -54,180 +75,192 @@
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="hero">
+
+<div class="top-header">
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+  <div>
     <h1>ARMCL-01 Delivery Tracking Dashboard</h1>
     <p>Live KPI dashboard, Cyclic Delivery Planning, independent truck assignment, and operations tracking.</p>
   </div>
+</div>
 
-  <div class="tabs">
-    <button class="tabBtn active" onclick="showTab('dashboard', this)">1. Live Dashboard</button>
-    <button class="tabBtn" onclick="showTab('orderCreate', this)">2. Order Creation</button>
-    <button class="tabBtn" onclick="showTab('dispatchCycles', this)">3. Dispatch Cycles & Assignment</button>
-    <button class="tabBtn" onclick="showTab('instant', this)">4. Operations Console</button>
-    <button class="tabBtn" onclick="showTab('settings', this)">5. Cost Model Settings</button>
-  </div>
-
-  <div id="dashboard" class="section active">
-    <div class="grid6" id="kpiRow"></div>
-    <div class="cols2">
-      <div class="panel">
-        <h2>Live Charts (Trips & Efficiencies)</h2>
-        <div class="cols3">
-          <div class="chartBox"><canvas id="statusPie"></canvas></div>
-          <div class="chartBox"><canvas id="trendLine"></canvas></div>
-          <div class="chartBox"><canvas id="clientBar"></canvas></div>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Fleet Utilization</h2>
-        <div class="miniGrid" id="fleetMini"></div>
-        <div class="cols2b" style="margin-top:15px">
-            <div class="chartBox"><canvas id="utilLine"></canvas></div>
-            <div class="chartBox"><canvas id="truckBar"></canvas></div>
-        </div>
-      </div>
-    </div>
-    <div class="panel">
-      <h2>Live Trip Activity — from Centralized Data</h2>
-      <div class="split">
-        <div class="bottomTable"><h3>In Transit / Scheduled</h3><div id="tableInTransit"></div></div>
-        <div class="bottomTable"><h3>Waiting / Unloading / Returned</h3><div id="tableWait"></div></div>
-      </div>
+<div class="app-container">
+  <div class="sidebar" id="sidebar">
+    <div class="tabs">
+      <button class="tabBtn active" onclick="showTab('dashboard', this)">1. Live Dashboard</button>
+      <button class="tabBtn" onclick="showTab('orderCreate', this)">2. Order Creation</button>
+      <button class="tabBtn" onclick="showTab('dispatchCycles', this)">3. Dispatch Cycles & Assignment</button>
+      <button class="tabBtn" onclick="showTab('instant', this)">4. Operations Console</button>
+      <button class="tabBtn" onclick="showTab('settings', this)">5. Cost Model Settings</button>
     </div>
   </div>
 
-  <div id="orderCreate" class="section">
-    <div class="cols2">
-        <div class="panel">
-          <h2>Create New Master Order</h2>
-          <div class="formgrid">
-            <div><label>Client</label><select id="ocClient"><option value="">Loading...</option></select></div>
-            <div style="grid-column: span 2;"><label>Address</label><input id="ocAddress" type="text" placeholder="Auto-fills from Client..."></div>
-            <div><label>SKU</label><select id="ocSku"><option value="">Loading...</option></select></div>
-            <div><label>Total Quantity (CFT)</label><input id="ocQty" type="number" min="1" step="0.01"></div>
-            <div><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
-            <div><label>Target Date</label><input id="ocDate" type="date"></div>
-            <div><label>Target Time</label><input id="ocTime" type="time"></div>
-            <div><label>Distance Override (km)</label><input id="ocOverride" type="number" placeholder="Optional"></div>
-            <div style="grid-column: span 3;"><label>Notes</label><input id="ocNotes" type="text"></div>
-          </div>
-          <button onclick="calculateRequirements()" style="margin-top:16px; width:100%;">Step 1: Calculate Route & Estimated Needs</button>
-        </div>
-
-        <div class="panel" id="ocResultSection" style="display:none; border:2px solid var(--brand2);">
-          <h2>Route & Requirement Analysis</h2>
-          <div class="mapWrap"><div id="map"></div></div>
-          <div style="display:flex; gap:15px; margin-top:10px;">
-              <div class="tag ok" id="routeDist">Distance: -</div>
-              <div class="tag ok" id="routeEta">ETA: -</div>
-              <div class="tag warn" style="font-weight:bold; font-size:14px;" id="trucksReq">Est. Trucks Needed: -</div>
-          </div>
-          <div id="planCost" class="small muted" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;"></div>
-          <button onclick="saveMasterOrder()" style="margin-top:16px; width:100%;" class="ok">Step 2: Save Master Order</button>
-        </div>
-    </div>
-  </div>
-
-  <div id="dispatchCycles" class="section">
-    <div class="cols2">
-      <div class="panel">
-        <h2>1. Select Active Order</h2>
-        <select id="dcOrder" style="background:#f9fbfe; border-color:#d7e2ee; margin-bottom:15px;"><option value="">Loading Active Orders...</option></select>
-        
-        <div id="dcStats" style="display:none;">
-            <div class="miniGrid" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:15px;">
-                <div class="mini"><div class="label">Total Ordered</div><div class="value" id="dcTotal">0</div></div>
-                <div class="mini"><div class="label">Delivered/Dispatched</div><div class="value" style="color:var(--ok)" id="dcDisp">0</div></div>
-                <div class="mini"><div class="label">Remaining Pending</div><div class="value" style="color:var(--bad)" id="dcRem">0</div></div>
-            </div>
-            
-            <div style="display:flex; gap:15px; align-items:flex-end; border-top:1px solid var(--line); padding-top:15px;">
-                <div style="flex:1;">
-                    <label>How many trucks to dispatch in this cycle?</label>
-                    <input id="dcCount" type="number" min="1" value="1">
-                </div>
-                <button onclick="buildCycleRows()" class="secondary" style="width:auto; padding:12px 20px;">Load Assignment Rows</button>
-            </div>
-        </div>
-      </div>
-
-      <div class="panel" id="dcAssignmentPanel" style="display:none; border:2px solid var(--brand2);">
-        <h2>2. Assign Trucks & Drivers</h2>
-        <p class="small muted" style="margin-top:0;">Only resources currently available at the plant are shown.</p>
-        <div id="dcAssignmentContainer"></div>
-        <button onclick="submitDispatchCycle()" style="margin-top:16px; width:100%;" class="ok">Dispatch This Cycle to Centralized Data</button>
-      </div>
-    </div>
-    
-    <div class="panel">
-        <h2>Active Master Orders (Pending Completion)</h2>
-        <div class="bottomTable" id="dispatchTable"></div>
-    </div>
-  </div>
-
-  <div id="instant" class="section">
-    <div class="cols2">
-      <div class="panel" style="border:2px solid var(--brand2)">
-        <h2>Instant Input (Operations Console)</h2>
-        <p class="small muted" style="margin-top:0; margin-bottom:15px;">Update the live status of dispatched cyclic trips.</p>
-        <div style="margin-bottom:14px;">
-            <label>1. Select Active Trip</label>
-            <select id="iiTrip" style="background:#f9fbfe; border-color:#d7e2ee;"><option value="">Loading active trips...</option></select>
-        </div>
-        <div style="margin-bottom:14px;">
-            <label>2. Select Event / Status Update</label>
-            <select id="iiEvent">
-                <option value="factory_out">Later Factory Out (Leaves Plant)</option>
-                <option value="arrival">Client Arrival (Reaches Site)</option>
-                <option value="ul_start">Unloading Start</option>
-                <option value="ul_end">Unloading End (Completed)</option>
-                <option value="return">Factory Return (Available Again)</option>
-            </select>
-        </div>
-        <div class="formgrid" style="grid-template-columns:1fr 1fr; margin-bottom:16px;">
-            <div><label>Date</label><input id="iiDate" type="date"></div>
-            <div><label>Time</label><input id="iiTime" type="time"></div>
-        </div>
-        <div id="iiDistWrap" style="display:none; margin-bottom:16px;">
-            <label>Total Trip Distance Covered (km)</label>
-            <input id="iiDistance" type="number" placeholder="Required for Return">
-        </div>
-        <button onclick="submitInstantEvent()">Submit Update to Centralized Data</button>
-      </div>
+  <div class="main-content">
+    <div class="wrap">
       
-      <div class="panel">
-        <h2>Trip Management Rules</h2>
-        <ul style="font-size:14px; color:var(--text); line-height:1.6;">
-            <li><b>Active Trips:</b> Once you hit "Dispatch Cycle", the trips immediately appear here.</li>
-            <li><b>Dropdown Filtering:</b> A truck/driver stays locked to this trip until you submit a <b>Factory Return</b>.</li>
-            <li><b>Live Boards:</b> Every submission here instantly updates the Dashboard, derived sheets (MTS, Truck Output), and Order Completion %.</li>
-        </ul>
+      <div id="dashboard" class="section active">
+        <div class="grid6" id="kpiRow"></div>
+        <div class="cols2">
+          <div class="panel">
+            <h2>Live Charts (Trips & Efficiencies)</h2>
+            <div class="cols3">
+              <div class="chartBox"><canvas id="statusPie"></canvas></div>
+              <div class="chartBox"><canvas id="trendLine"></canvas></div>
+              <div class="chartBox"><canvas id="clientBar"></canvas></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Fleet Utilization</h2>
+            <div class="miniGrid" id="fleetMini"></div>
+            <div class="cols2b" style="margin-top:15px">
+                <div class="chartBox"><canvas id="utilLine"></canvas></div>
+                <div class="chartBox"><canvas id="truckBar"></canvas></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Live Trip Activity — from Centralized Data</h2>
+          <div class="split">
+            <div class="bottomTable"><h3>In Transit / Scheduled</h3><div id="tableInTransit"></div></div>
+            <div class="bottomTable"><h3>Waiting / Unloading / Returned</h3><div id="tableWait"></div></div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <div id="settings" class="section">
-    <div class="panel">
-      <h2>Cost Model & Plant Settings</h2>
-      <div class="formgrid2">
-        <div><label>Plant Name</label><input id="stPlantName" readonly></div>
-        <div><label>Plant Address</label><input id="stPlantAddress" readonly></div>
-        <div><label>Plant Latitude</label><input id="stPlantLat" readonly></div>
-        <div><label>Plant Longitude</label><input id="stPlantLon" readonly></div>
-        <div><label>Capacity (CFT)</label><input id="stCap" type="number"></div>
-        <div><label>Speed (km/h)</label><input id="stSpeed" type="number"></div>
-        <div><label>Fixed Trip (BDT)</label><input id="stFixed" type="number"></div>
-        <div><label>Cost per km (BDT)</label><input id="stKm" type="number"></div>
-        <div><label>Pump Charge</label><input id="stPump" type="number"></div>
-        <div><label>Idle Cost/Hr</label><input id="stIdle" type="number"></div>
-        <div><label>Load Charge</label><input id="stLoad" type="number"></div>
-        <div><label>Unload Charge</label><input id="stUnload" type="number"></div>
-        <div><label>Contingency %</label><input id="stCont" type="number"></div>
-        <div><label>Load Buffer Min</label><input id="stLoadBuf" type="number"></div>
-        <div><label>Unload Buffer Min</label><input id="stUnloadBuf" type="number"></div>
-        <div style="display:flex;align-items:end"><button type="button" onclick="saveSettings()">Save Settings</button></div>
+      <div id="orderCreate" class="section">
+        <div class="cols2">
+            <div class="panel">
+              <h2>Create New Master Order</h2>
+              <div class="formgrid">
+                <div><label>Client</label><select id="ocClient"><option value="">Loading...</option></select></div>
+                <div style="grid-column: span 2;"><label>Address</label><input id="ocAddress" type="text" placeholder="Auto-fills from Client..."></div>
+                <div><label>SKU</label><select id="ocSku"><option value="">Loading...</option></select></div>
+                <div><label>Total Quantity (CFT)</label><input id="ocQty" type="number" min="1" step="0.01"></div>
+                <div><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
+                <div><label>Target Date</label><input id="ocDate" type="date"></div>
+                <div><label>Target Time</label><input id="ocTime" type="time"></div>
+                <div><label>Distance Override (km)</label><input id="ocOverride" type="number" placeholder="Optional"></div>
+                <div style="grid-column: span 3;"><label>Notes</label><input id="ocNotes" type="text"></div>
+              </div>
+              <button onclick="calculateRequirements()" style="margin-top:16px; width:100%;">Step 1: Calculate Route & Estimated Needs</button>
+            </div>
+
+            <div class="panel" id="ocResultSection" style="display:none; border:2px solid var(--brand2);">
+              <h2>Route & Requirement Analysis</h2>
+              <div class="mapWrap"><div id="map"></div></div>
+              <div style="display:flex; gap:15px; margin-top:10px;">
+                  <div class="tag ok" id="routeDist">Distance: -</div>
+                  <div class="tag ok" id="routeEta">ETA: -</div>
+                  <div class="tag warn" style="font-weight:bold; font-size:14px;" id="trucksReq">Est. Trucks Needed: -</div>
+              </div>
+              <div id="planCost" class="small muted" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;"></div>
+              <button onclick="saveMasterOrder()" style="margin-top:16px; width:100%;" class="ok">Step 2: Save Master Order</button>
+            </div>
+        </div>
       </div>
+
+      <div id="dispatchCycles" class="section">
+        <div class="cols2">
+          <div class="panel">
+            <h2>1. Select Active Order</h2>
+            <select id="dcOrder" style="background:#f9fbfe; border-color:#d7e2ee; margin-bottom:15px;"><option value="">Loading Active Orders...</option></select>
+            
+            <div id="dcStats" style="display:none;">
+                <div class="miniGrid" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:15px;">
+                    <div class="mini"><div class="label">Total Ordered</div><div class="value" id="dcTotal">0</div></div>
+                    <div class="mini"><div class="label">Delivered/Dispatched</div><div class="value" style="color:var(--ok)" id="dcDisp">0</div></div>
+                    <div class="mini"><div class="label">Remaining Pending</div><div class="value" style="color:var(--bad)" id="dcRem">0</div></div>
+                </div>
+                
+                <div style="display:flex; gap:15px; align-items:flex-end; border-top:1px solid var(--line); padding-top:15px;">
+                    <div style="flex:1;">
+                        <label>How many trucks to dispatch in this cycle?</label>
+                        <input id="dcCount" type="number" min="1" value="1">
+                    </div>
+                    <button onclick="buildCycleRows()" class="secondary" style="width:auto; padding:12px 20px;">Load Assignment Rows</button>
+                </div>
+            </div>
+          </div>
+
+          <div class="panel" id="dcAssignmentPanel" style="display:none; border:2px solid var(--brand2);">
+            <h2>2. Assign Trucks & Drivers</h2>
+            <p class="small muted" style="margin-top:0;">Only resources currently available at the plant are shown.</p>
+            <div id="dcAssignmentContainer"></div>
+            <button onclick="submitDispatchCycle()" style="margin-top:16px; width:100%;" class="ok">Dispatch This Cycle to Centralized Data</button>
+          </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Active Master Orders (Pending Completion)</h2>
+            <div class="bottomTable" id="dispatchTable"></div>
+        </div>
+      </div>
+
+      <div id="instant" class="section">
+        <div class="cols2">
+          <div class="panel" style="border:2px solid var(--brand2)">
+            <h2>Instant Input (Operations Console)</h2>
+            <p class="small muted" style="margin-top:0; margin-bottom:15px;">Update the live status of dispatched cyclic trips.</p>
+            <div style="margin-bottom:14px;">
+                <label>1. Select Active Trip</label>
+                <select id="iiTrip" style="background:#f9fbfe; border-color:#d7e2ee;"><option value="">Loading active trips...</option></select>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label>2. Select Event / Status Update</label>
+                <select id="iiEvent">
+                    <option value="factory_out">Later Factory Out (Leaves Plant)</option>
+                    <option value="arrival">Client Arrival (Reaches Site)</option>
+                    <option value="ul_start">Unloading Start</option>
+                    <option value="ul_end">Unloading End (Completed)</option>
+                    <option value="return">Factory Return (Available Again)</option>
+                </select>
+            </div>
+            <div class="formgrid" style="grid-template-columns:1fr 1fr; margin-bottom:16px;">
+                <div><label>Date</label><input id="iiDate" type="date"></div>
+                <div><label>Time</label><input id="iiTime" type="time"></div>
+            </div>
+            <div id="iiDistWrap" style="display:none; margin-bottom:16px;">
+                <label>Total Trip Distance Covered (km)</label>
+                <input id="iiDistance" type="number" placeholder="Required for Return">
+            </div>
+            <button onclick="submitInstantEvent()">Submit Update to Centralized Data</button>
+          </div>
+          
+          <div class="panel">
+            <h2>Trip Management Rules</h2>
+            <ul style="font-size:14px; color:var(--text); line-height:1.6;">
+                <li><b>Active Trips:</b> Once you hit "Dispatch Cycle", the trips immediately appear here.</li>
+                <li><b>Dropdown Filtering:</b> A truck/driver stays locked to this trip until you submit a <b>Factory Return</b>.</li>
+                <li><b>Live Boards:</b> Every submission here instantly updates the Dashboard, derived sheets (MTS, Truck Output), and Order Completion %.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="settings" class="section">
+        <div class="panel">
+          <h2>Cost Model & Plant Settings</h2>
+          <div class="formgrid2">
+            <div><label>Plant Name</label><input id="stPlantName" readonly></div>
+            <div><label>Plant Address</label><input id="stPlantAddress" readonly></div>
+            <div><label>Plant Latitude</label><input id="stPlantLat" readonly></div>
+            <div><label>Plant Longitude</label><input id="stPlantLon" readonly></div>
+            <div><label>Capacity (CFT)</label><input id="stCap" type="number"></div>
+            <div><label>Speed (km/h)</label><input id="stSpeed" type="number"></div>
+            <div><label>Fixed Trip (BDT)</label><input id="stFixed" type="number"></div>
+            <div><label>Cost per km (BDT)</label><input id="stKm" type="number"></div>
+            <div><label>Pump Charge</label><input id="stPump" type="number"></div>
+            <div><label>Idle Cost/Hr</label><input id="stIdle" type="number"></div>
+            <div><label>Load Charge</label><input id="stLoad" type="number"></div>
+            <div><label>Unload Charge</label><input id="stUnload" type="number"></div>
+            <div><label>Contingency %</label><input id="stCont" type="number"></div>
+            <div><label>Load Buffer Min</label><input id="stLoadBuf" type="number"></div>
+            <div><label>Unload Buffer Min</label><input id="stUnloadBuf" type="number"></div>
+            <div style="display:flex;align-items:end"><button type="button" onclick="saveSettings()">Save Settings</button></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -247,6 +280,10 @@ let CURRENT_CALC = {};
 let CHARTS = { statusPie: null, trendLine: null, clientBar: null, utilLine: null, truckBar: null };
 
 function qs(id){ return document.getElementById(id); }
+
+function toggleSidebar() {
+  qs('sidebar').classList.toggle('open');
+}
 
 function toast(msg, isError = false) {
     const el = qs('statusMsg');
@@ -277,11 +314,19 @@ function showTab(tabId, btn){
   document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+  
   qs(tabId).style.display = 'block';
   qs(tabId).classList.add('active');
   btn.classList.add('active');
+  
   if (tabId === 'orderCreate' && MAP) setTimeout(() => MAP.invalidateSize(), 200);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  
+  // Close sidebar on mobile after clicking
+  if (window.innerWidth <= 900) {
+      qs('sidebar').classList.remove('open');
+  }
+  
+  document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
