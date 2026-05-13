@@ -9,8 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    /* Keep all your existing CSS exactly as it was. I have truncated it here to save space, 
-       but ensure you paste your original CSS block here. */
     :root{ --bg:#f4f7fb; --card:#fff; --text:#10233e; --muted:#6b7a90; --line:#e5ebf3; --brand:#16345f; --brand2:#0f7c90; --ok:#1a9b58; --warn:#e39b20; --bad:#d64545; }
     *{box-sizing:border-box} body{ margin:0; background:var(--bg); font-family:Arial,sans-serif; color:var(--text); }
     .wrap{ max-width:1600px; margin:0 auto; padding:18px; }
@@ -24,7 +22,7 @@
     .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; }
     .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
     .kpi .value{ font-size:28px; font-weight:700; margin-top:8px; }
-    .panel{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:16px; }
+    .panel{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:16px; box-shadow:0 8px 18px rgba(16,35,62,.05); }
     .panel h2{ margin:0 0 12px; font-size:18px; }
     .cols2{ display:grid; grid-template-columns:1.05fr .95fr; gap:14px; }
     .cols2b{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -237,40 +235,40 @@
           <div class="box"><h3>Assigned Trucks</h3><div id="planTrucks" class="small muted">No plan yet.</div></div>
         </div>
       </div>
+      
       <div class="panel">
+        <h2>OSM Route Map</h2>
+        <div class="mapWrap"><div id="map"></div></div>
+        <div class="statusLine muted" id="mapStatus">Map appears after a plan is calculated.</div>
+      </div>
+    </div>
+    
+    <div class="panel">
         <h2>Dispatch Orders</h2>
         <div class="bottomTable" id="dispatchTable"></div>
-      </div>
     </div>
   </div>
 
   <div id="settings" class="section">
-    <div class="cols2">
-      <div class="panel">
-        <h2>Cost Model</h2>
-        <div class="formgrid2">
-          <div><label>Plant Name</label><input id="stPlantName" readonly></div>
-          <div><label>Plant Address</label><input id="stPlantAddress" readonly></div>
-          <div><label>Plant Latitude</label><input id="stPlantLat" readonly></div>
-          <div><label>Plant Longitude</label><input id="stPlantLon" readonly></div>
-          <div><label>Capacity (CFT)</label><input id="stCap" type="number"></div>
-          <div><label>Speed (km/h)</label><input id="stSpeed" type="number"></div>
-          <div><label>Fixed Trip (BDT)</label><input id="stFixed" type="number"></div>
-          <div><label>Cost per km (BDT)</label><input id="stKm" type="number"></div>
-          <div><label>Pump Charge</label><input id="stPump" type="number"></div>
-          <div><label>Idle Cost/Hr</label><input id="stIdle" type="number"></div>
-          <div><label>Load Charge</label><input id="stLoad" type="number"></div>
-          <div><label>Unload Charge</label><input id="stUnload" type="number"></div>
-          <div><label>Contingency %</label><input id="stCont" type="number"></div>
-          <div><label>Load Buffer Min</label><input id="stLoadBuf" type="number"></div>
-          <div><label>Unload Buffer Min</label><input id="stUnloadBuf" type="number"></div>
-          <div style="display:flex;align-items:end"><button type="button" onclick="saveSettings()">Save Settings</button></div>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>OSM Map</h2>
-        <div class="mapWrap"><div id="map"></div></div>
-        <div class="statusLine muted" id="mapStatus">Connecting to API...</div>
+    <div class="panel">
+      <h2>Cost Model</h2>
+      <div class="formgrid2">
+        <div><label>Plant Name</label><input id="stPlantName" readonly></div>
+        <div><label>Plant Address</label><input id="stPlantAddress" readonly></div>
+        <div><label>Plant Latitude</label><input id="stPlantLat" readonly></div>
+        <div><label>Plant Longitude</label><input id="stPlantLon" readonly></div>
+        <div><label>Capacity (CFT)</label><input id="stCap" type="number"></div>
+        <div><label>Speed (km/h)</label><input id="stSpeed" type="number"></div>
+        <div><label>Fixed Trip (BDT)</label><input id="stFixed" type="number"></div>
+        <div><label>Cost per km (BDT)</label><input id="stKm" type="number"></div>
+        <div><label>Pump Charge</label><input id="stPump" type="number"></div>
+        <div><label>Idle Cost/Hr</label><input id="stIdle" type="number"></div>
+        <div><label>Load Charge</label><input id="stLoad" type="number"></div>
+        <div><label>Unload Charge</label><input id="stUnload" type="number"></div>
+        <div><label>Contingency %</label><input id="stCont" type="number"></div>
+        <div><label>Load Buffer Min</label><input id="stLoadBuf" type="number"></div>
+        <div><label>Unload Buffer Min</label><input id="stUnloadBuf" type="number"></div>
+        <div style="display:flex;align-items:end"><button type="button" onclick="saveSettings()">Save Settings</button></div>
       </div>
     </div>
   </div>
@@ -281,7 +279,7 @@
 // API CONFIGURATION
 // =====================================================================
 // PASTE YOUR GOOGLE WEB APP DEPLOYMENT URL HERE:
-const API_URL = "https://script.google.com/macros/s/AKfycby2uE3QEfcIDJmMarF9hsoOrcivVkJKnSBIHab7s2lZqr_PhNOgpNxgcu5p1yJrx2Pffg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwjzXGxwgH9h7lZBATDKJ8AdxUubPGycmv_LPxlQFsKPYRrGHWKki0mj0Oj1AysrQWPLw/exec";
 
 let APP = {};
 let MAP = null;
@@ -291,24 +289,26 @@ let CHARTS = { statusPie: null, trendLine: null, clientBar: null };
 function qs(id){ return document.getElementById(id); }
 
 // =====================================================================
-// NEW FETCH WRAPPER (Replaces google.script.run)
+// NEW FETCH WRAPPER (With Timeout Failsafe)
 // =====================================================================
 function gs(fnName, payloadArgs) {
   return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => { reject(new Error("Google took too long to respond.")); }, 30000);
     fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ fn: fnName, args: payloadArgs })
     })
     .then(response => {
-      if (!response.ok) throw new Error("Network response was not ok");
+      clearTimeout(timeoutId); 
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       return response.json();
     })
     .then(json => {
       if (json.status === 'success') resolve(json.data);
       else reject(new Error(json.message));
     })
-    .catch(err => reject(err));
+    .catch(err => { clearTimeout(timeoutId); reject(err); });
   });
 }
 
@@ -318,7 +318,7 @@ function showTab(tabId, btn){
   const target = qs(tabId);
   if (target) { target.style.display = 'block'; target.classList.add('active'); }
   if (btn) btn.classList.add('active');
-  if (tabId === 'settings' || tabId === 'dispatch') {
+  if (tabId === 'dispatch') {
     setTimeout(() => { ensureMapReady(); if (MAP) MAP.invalidateSize(true); }, 200);
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -342,94 +342,61 @@ function initDates(){
 function ensureMapReady(){
   if (!window.L || MAP) return;
   try {
-    MAP = L.map('map').setView([23.886798363152327, 90.35946324417702], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(MAP);
-    L.marker([23.886798363152327, 90.35946324417702]).addTo(MAP).bindPopup('ARMCL Dhour Plant');
+    MAP = L.map('map').setView([23.886798, 90.359463], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OSM' }).addTo(MAP);
+    L.marker([23.886798, 90.359463]).addTo(MAP).bindPopup('ARMCL Dhour Plant');
   } catch (e) { console.error('Map init failed:', e); }
 }
 
-// =====================================================================
-// UI RENDERING & DROPDOWNS
-// =====================================================================
 function populateDropdowns(data) {
   const uniqClients = [...new Set((data.clients || []).map(v => String(v).trim()).filter(Boolean))];
   const clientHtml = uniqClients.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
-  
   const uniqSkus = [...new Set((data.skus || []).map(v => String(v).trim()).filter(Boolean))];
   const skuHtml = uniqSkus.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
-  
-  const truckHtml = (data.trucks || []).filter(t => t.truckNo).map(t => {
-    const label = t.truckNo + (t.driver ? ` — ${t.driver}` : '');
-    return `<option value="${esc(t.truckNo)}">${esc(label)}</option>`;
-  }).join('');
+  const truckHtml = (data.trucks || []).filter(t => t.truckNo).map(t => { return `<option value="${esc(t.truckNo)}">${esc(t.truckNo + (t.driver ? ` — ${t.driver}` : ''))}</option>`; }).join('');
 
-  ['foClient', 'arrClient', 'ulsClient', 'uleClient', 'retClient', 'dpClient'].forEach(id => {
-    if(qs(id)) qs(id).innerHTML = '<option value="">Select client</option>' + clientHtml;
-  });
-
-  ['foSku', 'dpSku'].forEach(id => {
-    if(qs(id)) qs(id).innerHTML = '<option value="">Select SKU</option>' + skuHtml;
-  });
-
-  ['foTruck', 'arrTruck', 'ulsTruck', 'uleTruck', 'retTruck', 'dpTruck'].forEach(id => {
-    if(qs(id)) qs(id).innerHTML = '<option value="">Select truck</option>' + truckHtml;
-  });
+  ['foClient', 'arrClient', 'ulsClient', 'uleClient', 'retClient', 'dpClient'].forEach(id => { if(qs(id)) qs(id).innerHTML = '<option value="">Select client</option>' + clientHtml; });
+  ['foSku', 'dpSku'].forEach(id => { if(qs(id)) qs(id).innerHTML = '<option value="">Select SKU</option>' + skuHtml; });
+  ['foTruck', 'arrTruck', 'ulsTruck', 'uleTruck', 'retTruck', 'dpTruck'].forEach(id => { if(qs(id)) qs(id).innerHTML = '<option value="">Select truck</option>' + truckHtml; });
 }
 
 function fillSettings(p){
   p = p || {};
-  qs('stPlantName').value = p.plantName || 'ARMCL Dhour Plant';
-  qs('stPlantAddress').value = p.plantAddress || 'Dhour Plant, Dhaka, Bangladesh';
-  qs('stPlantLat').value = p.plantLat || '23.886798363152327';
-  qs('stPlantLon').value = p.plantLon || '90.35946324417702';
-  qs('stCap').value = p.truckCapacity || 247;
-  qs('stSpeed').value = p.avgSpeedKmph || 25;
-  qs('stFixed').value = p.fixedTripBDT || 0;
-  qs('stKm').value = p.perKmBDT || 0;
-  qs('stPump').value = p.pumpChargeBDT || 0;
-  qs('stLoad').value = p.loadingChargeBDT || 0;
-  qs('stUnload').value = p.unloadingChargeBDT || 0;
-  qs('stIdle').value = p.idleCostPerHourBDT || 0;
-  qs('stCont').value = p.contingencyPct || 0;
-  qs('stLoadBuf').value = p.loadingBufferMin || 20;
-  qs('stUnloadBuf').value = p.unloadingBufferMin || 30;
+  if(qs('stPlantName')) qs('stPlantName').value = p.plantName || 'ARMCL Dhour Plant'; 
+  if(qs('stPlantAddress')) qs('stPlantAddress').value = p.plantAddress || 'Dhour Plant, Dhaka, Bangladesh';
+  if(qs('stCap')) qs('stCap').value = p.truckCapacity || 247; 
+  if(qs('stSpeed')) qs('stSpeed').value = p.avgSpeedKmph || 25; 
+  if(qs('stFixed')) qs('stFixed').value = p.fixedTripBDT || 0;
+  if(qs('stKm')) qs('stKm').value = p.perKmBDT || 0; 
+  if(qs('stPump')) qs('stPump').value = p.pumpChargeBDT || 0; 
+  if(qs('stLoad')) qs('stLoad').value = p.loadingChargeBDT || 0;
+  if(qs('stUnload')) qs('stUnload').value = p.unloadingChargeBDT || 0; 
+  if(qs('stIdle')) qs('stIdle').value = p.idleCostPerHourBDT || 0; 
+  if(qs('stCont')) qs('stCont').value = p.contingencyPct || 0;
 }
 
 function statusClass(s){
   s = String(s || '');
   if (s === 'Completed' || s === 'Returned & Available') return 'ok';
   if (s === 'In Transit' || s === 'Waiting For Unload' || s === 'Unloading' || s === 'Scheduled') return 'warn';
-  if (s === 'Breakdown') return 'bad';
-  return '';
+  if (s === 'Breakdown') return 'bad'; return '';
 }
 
 function renderKpis(d){
-  const cards = [
-    ['In Transit', d.inTransit || 0], ['Waiting For Unload', d.waiting || 0], ['Currently Unloading', d.unloading || 0],
-    ['Completed Today', d.completedToday || 0], ['Breakdown', d.breakdown || 0], ['Total Trips', d.totalTrips || 0],
-    ['Avg Transit', d.avgTransit || 0], ['Avg Wait', d.avgWait || 0], ['Avg Unload', d.avgUnload || 0],
-    ['Avg Cycle', d.avgCycle || 0], ['Total CFT', d.totalCft || 0], ['SMV Efficiency', (d.smvEfficiency || 0) + '%']
-  ];
+  if(!qs('kpiRow')) return;
+  const cards = [['In Transit', d.inTransit||0], ['Waiting', d.waiting||0], ['Unloading', d.unloading||0], ['Completed Today', d.completedToday||0], ['Breakdown', d.breakdown||0], ['Total Trips', d.totalTrips||0], ['Avg Transit', d.avgTransit||0], ['Avg Wait', d.avgWait||0], ['Avg Unload', d.avgUnload||0], ['Avg Cycle', d.avgCycle||0], ['Total CFT', d.totalCft||0], ['SMV Efficiency', (d.smvEfficiency||0)+'%']];
   qs('kpiRow').innerHTML = cards.map(([a,b]) => `<div class="card kpi"><div class="label">${esc(a)}</div><div class="value">${esc(String(b))}</div></div>`).join('');
 }
 
 function fleetMini(data){
-  data = data || {};
-  const trucks = Array.isArray(data.trucks) ? data.trucks : [];
-  const available = Array.isArray(data.availableTrucks) ? data.availableTrucks : [];
-  const total = trucks.length;
-  const avail = available.filter(t => t && t.available).length;
-  const active = trucks.filter(t => t && t.status === 'Active').length;
-  const busy = Math.max(0, active - avail);
-  qs('fleetMini').innerHTML = `
-    <div class="mini"><div class="label">Active</div><div class="value">${active}</div></div>
-    <div class="mini"><div class="label">Available</div><div class="value">${avail}</div></div>
-    <div class="mini"><div class="label">Busy</div><div class="value">${busy}</div></div>
-    <div class="mini"><div class="label">Total Fleet</div><div class="value">${total}</div></div>
-  `;
+  if(!qs('fleetMini')) return;
+  data = data || {}; const trucks = Array.isArray(data.trucks) ? data.trucks : []; const available = Array.isArray(data.availableTrucks) ? data.availableTrucks : [];
+  const total = trucks.length; const avail = available.filter(t => t && t.available).length; const active = trucks.filter(t => t && t.status === 'Active').length; const busy = Math.max(0, active - avail);
+  qs('fleetMini').innerHTML = `<div class="mini"><div class="label">Active</div><div class="value">${active}</div></div><div class="mini"><div class="label">Available</div><div class="value">${avail}</div></div><div class="mini"><div class="label">Busy</div><div class="value">${busy}</div></div><div class="mini"><div class="label">Total Fleet</div><div class="value">${total}</div></div>`;
 }
 
 function renderTable(container, rows){
+  if (!qs(container)) return;
   if (!rows || !rows.length) { qs(container).innerHTML = '<div class="small muted">No rows found.</div>'; return; }
   const html = `<table><thead><tr><th>Truck</th><th>Client</th><th>SKU</th><th>Qty</th><th>FO</th><th>Arrival</th><th>UL Start</th><th>UL End</th><th>Cycle</th><th>Status</th><th>Remarks</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td>${esc(r.truck || '')}</td><td>${esc(r.client || '')}</td><td>${esc(r.sku || '')}</td><td>${money(r.qty || 0)}</td><td>${esc(r.fo || '')}</td><td>${esc(r.arrival || '')}</td><td>${esc(r.uls || '')}</td><td>${esc(r.ule || '')}</td><td>${esc(r.cycle || '')}</td><td><span class="tag ${statusClass(r.status)}">${esc(r.status || '')}</span></td><td>${esc(r.remarks || '')}</td></tr>`).join('')}
@@ -438,33 +405,30 @@ function renderTable(container, rows){
 }
 
 function renderDispatchTable(rows){
-  if (!rows || !rows.length) { qs('dispatchTable').innerHTML = '<div class="small muted">No dispatch orders yet.</div>'; return; }
+  if (!qs('dispatchTable')) return;
+  if (!rows || !rows.length) { qs('dispatchTable').innerHTML = '<div class="small muted">No orders yet.</div>'; return; }
   qs('dispatchTable').innerHTML = `<table><thead><tr><th>Order ID</th><th>Client</th><th>Qty</th><th>Trucks</th><th>Priority</th><th>Distance</th><th>Status</th><th>Assigned</th><th>Action</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><td>${esc(r.orderId || '')}</td><td>${esc(r.client || '')}</td><td>${money(r.qty || 0)}</td><td>${esc(r.trucksRequired || '')}</td><td>${esc(r.priority || '')}</td><td>${money(r.distanceKm || 0)}</td><td><span class="tag ${statusClass(r.status)}">${esc(r.status || '')}</span></td><td>${esc(r.assignedTrucks || '')}</td><td><button type="button" class="ghost" onclick="dispatchNow('${esc(r.orderId)}')">Dispatch Now</button></td></tr>`).join('')}
+    ${rows.map(r => {
+      const s = String(r.status || '').trim();
+      const actionBtn = (s === 'In Transit' || s === 'Completed' || s === 'Scheduled') ? `<span class="muted">Dispatched</span>` : `<button type="button" class="ghost" onclick="dispatchNow('${esc(r.orderId)}')">Dispatch Now</button>`;
+      return `<tr><td>${esc(r.orderId || '')}</td><td>${esc(r.client || '')}</td><td>${money(r.qty || 0)}</td><td>${esc(r.trucksRequired || '')}</td><td>${esc(r.priority || '')}</td><td>${money(r.distanceKm || 0)}</td><td><span class="tag ${statusClass(r.status)}">${esc(r.status || '')}</span></td><td>${esc(r.assignedTrucks || '')}</td><td>${actionBtn}</td></tr>`;
+    }).join('')}
   </tbody></table>`;
 }
 
 function renderCharts(chartsData){
-  const statusPie = (chartsData && chartsData.statusPie) || {};
-  const trend = (chartsData && chartsData.trendLine) || {};
-  const client = (chartsData && chartsData.clientBar) || {};
-
-  if (CHARTS.statusPie) CHARTS.statusPie.destroy();
-  if (CHARTS.trendLine) CHARTS.trendLine.destroy();
-  if (CHARTS.clientBar) CHARTS.clientBar.destroy();
-
+  if(!qs('statusPie') || !qs('trendLine') || !qs('clientBar')) return;
+  const statusPie = (chartsData && chartsData.statusPie) || {}; const trend = (chartsData && chartsData.trendLine) || {}; const client = (chartsData && chartsData.clientBar) || {};
+  if (CHARTS.statusPie) CHARTS.statusPie.destroy(); if (CHARTS.trendLine) CHARTS.trendLine.destroy(); if (CHARTS.clientBar) CHARTS.clientBar.destroy();
   CHARTS.statusPie = new Chart(qs('statusPie').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(statusPie), datasets: [{ data: Object.keys(statusPie).map(k => statusPie[k]) }] }, options: { responsive: true, maintainAspectRatio: false } });
   CHARTS.trendLine = new Chart(qs('trendLine').getContext('2d'), { type: 'line', data: { labels: trend.labels || [], datasets: [ { label: 'Avg Cycle', data: trend.cycleVals || [] }, { label: 'Qty', data: trend.qtyVals || [] } ] }, options: { responsive: true, maintainAspectRatio: false } });
   CHARTS.clientBar = new Chart(qs('clientBar').getContext('2d'), { type: 'bar', data: { labels: client.labels || [], datasets: [{ label: 'Qty', data: client.qtyVals || [] }] }, options: { responsive: true, maintainAspectRatio: false } });
 }
 
 function renderOperations(tables){
-  tables = tables || {};
-  renderTable('tableInTransit', tables.inTransit || []);
+  tables = tables || {}; renderTable('tableInTransit', tables.inTransit || []);
   const mix = [].concat(tables.waiting || []).concat(tables.unloading || []).concat(tables.returned || []).concat(tables.delayed || []);
-  renderTable('tableWait', mix);
-  renderTable('opsTableA', (tables.waiting || []).concat(tables.unloading || []));
-  renderTable('opsTableB', (tables.returned || []).concat(tables.delayed || []));
+  renderTable('tableWait', mix); renderTable('opsTableA', (tables.waiting || []).concat(tables.unloading || [])); renderTable('opsTableB', (tables.returned || []).concat(tables.delayed || []));
 }
 
 function updatePage(res){
@@ -478,64 +442,28 @@ function updatePage(res){
   if (res.settings) fillSettings(res.settings);
 }
 
-// =====================================================================
-// MAP & SIMULATION RENDERING
-// =====================================================================
 function updateMap(plan){
-  if (!MAP) return;
+  if (!MAP || !qs('mapStatus')) return;
   try {
-    const origin = plan.routeOrigin;
-    const dest = plan.routeDestination;
-
+    const origin = plan.routeOrigin; const dest = plan.routeDestination;
     if (ROUTE_LAYER) { MAP.removeLayer(ROUTE_LAYER); ROUTE_LAYER = null; }
-    if (!origin || !dest || !plan.routeCoords || !plan.routeCoords.length || origin.lat == null || dest.lat == null) {
-      qs('mapStatus').innerHTML = '<span class="tag warn">Route not available</span>'; return;
-    }
-
+    if (!origin || !dest || !plan.routeCoords || !plan.routeCoords.length || origin.lat == null || dest.lat == null) { qs('mapStatus').innerHTML = '<span class="tag warn">Route not available</span>'; return; }
     ROUTE_LAYER = L.polyline(plan.routeCoords, { weight: 5 }).addTo(MAP);
-    L.marker([origin.lat, origin.lon]).addTo(MAP).bindPopup('ARMCL Dhour Plant');
-    L.marker([dest.lat, dest.lon]).addTo(MAP).bindPopup('Destination');
+    L.marker([origin.lat, origin.lon]).addTo(MAP).bindPopup('ARMCL Dhour Plant'); L.marker([dest.lat, dest.lon]).addTo(MAP).bindPopup('Destination');
     MAP.fitBounds(ROUTE_LAYER.getBounds(), { padding: [25, 25] });
-
     qs('mapStatus').innerHTML = `<span class="tag ok">Distance: ${money(plan.distanceKm)} km</span> <span class="tag ok">ETA: ${plan.etaMin} min</span>`;
   } catch (e) { qs('mapStatus').innerHTML = `<span class="tag bad">Map error: ${esc(e.message || e)}</span>`; }
 }
 
 function renderPlan(plan){
   const p = plan || {};
-  qs('planKpis').innerHTML = `
-    <div class="mini"><div class="label">Trucks Needed</div><div class="value">${p.requiredTrucks || 0}</div></div>
-    <div class="mini"><div class="label">Assigned</div><div class="value">${p.assignedTrucks || 0}</div></div>
-    <div class="mini"><div class="label">Distance</div><div class="value">${money(p.distanceKm || 0)}</div></div>
-    <div class="mini"><div class="label">ETA</div><div class="value">${p.etaMin || 0}</div></div>
-  `;
-
+  if(qs('planKpis')) qs('planKpis').innerHTML = `<div class="mini"><div class="label">Trucks Needed</div><div class="value">${p.requiredTrucks || 0}</div></div><div class="mini"><div class="label">Assigned</div><div class="value">${p.assignedTrucks || 0}</div></div><div class="mini"><div class="label">Distance</div><div class="value">${money(p.distanceKm || 0)}</div></div><div class="mini"><div class="label">ETA</div><div class="value">${p.etaMin || 0}</div></div>`;
   const c = p.plannedCost || {};
-  qs('planCost').innerHTML = `
-    <div><b>Route source:</b> ${esc(p.source || '')}</div>
-    <div><b>Fixed:</b> BDT ${money(c.fixed)}</div>
-    <div><b>Road:</b> BDT ${money(c.road)}</div>
-    <div><b>Pump:</b> BDT ${money(c.pump)}</div>
-    <div><b>Loading:</b> BDT ${money(c.loading)}</div>
-    <div><b>Unloading:</b> BDT ${money(c.unloading)}</div>
-    <div><b>Time cost:</b> BDT ${money(c.time)}</div>
-    <div><b>Contingency:</b> BDT ${money(c.contingency)}</div>
-    <div style="margin-top:8px"><b>Total:</b> BDT ${money(c.total)}</div>
-    <div><b>Cost / CFT:</b> BDT ${money(c.perCft)}</div>
-    ${p.remainingQty > 0 ? `<div style="color:#b45309;margin-top:8px"><b>Shortfall:</b> ${money(p.remainingQty)} CFT</div>` : ''}
-  `;
-
-  qs('planTrucks').innerHTML = (p.assignedTrucksList || []).length ? `
-    <table><thead><tr><th>Truck</th><th>Driver</th><th>Load</th><th>Reg</th></tr></thead><tbody>
-    ${(p.assignedTrucksList || []).map(t => `<tr><td>${esc(t.truckNo || '')}</td><td>${esc(t.driver || '')}</td><td>${money(t.load || 0)}</td><td>${esc(t.reg || '')}</td></tr>`).join('')}
-    </tbody></table>
-  ` : '<div class="small muted">No trucks assigned.</div>';
+  if(qs('planCost')) qs('planCost').innerHTML = `<div><b>Route source:</b> ${esc(p.source || '')}</div><div><b>Fixed:</b> BDT ${money(c.fixed)}</div><div><b>Road:</b> BDT ${money(c.road)}</div><div><b>Pump:</b> BDT ${money(c.pump)}</div><div><b>Loading:</b> BDT ${money(c.loading)}</div><div><b>Unloading:</b> BDT ${money(c.unloading)}</div><div><b>Time cost:</b> BDT ${money(c.time)}</div><div><b>Contingency:</b> BDT ${money(c.contingency)}</div><div style="margin-top:8px"><b>Total:</b> BDT ${money(c.total)}</div><div><b>Cost / CFT:</b> BDT ${money(c.perCft)}</div>${p.remainingQty > 0 ? `<div style="color:#b45309;margin-top:8px"><b>Shortfall:</b> ${money(p.remainingQty)} CFT</div>` : ''}`;
+  if(qs('planTrucks')) qs('planTrucks').innerHTML = (p.assignedTrucksList || []).length ? `<table><thead><tr><th>Truck</th><th>Driver</th><th>Load</th><th>Reg</th></tr></thead><tbody>${(p.assignedTrucksList || []).map(t => `<tr><td>${esc(t.truckNo || '')}</td><td>${esc(t.driver || '')}</td><td>${money(t.load || 0)}</td><td>${esc(t.reg || '')}</td></tr>`).join('')}</tbody></table>` : '<div class="small muted">No trucks assigned.</div>';
   updateMap(p);
 }
 
-// =====================================================================
-// DATA COLLECTION & API CALLS
-// =====================================================================
 function selectedPayloadFor(type){
   if (type === 'factory_out') return { type: type, truck: qs('foTruck').value, client: qs('foClient').value, sku: qs('foSku').value, qty: qs('foQty').value, pump: qs('foPump').value, date: qs('foDate').value, time: qs('foTime').value, distanceKm: qs('foDistance').value, remarks: 'Factory out from webapp' };
   if (type === 'arrival') return { type: type, truck: qs('arrTruck').value, client: qs('arrClient').value, date: qs('arrDate').value, time: qs('arrTime').value, remarks: 'Arrival recorded from webapp' };
@@ -547,13 +475,8 @@ function selectedPayloadFor(type){
 
 async function saveEvent(type){
   try {
-    setMsg('Saving event...');
-    const payload = selectedPayloadFor(type);
-    const res = await gs('saveInstantEvent', payload);
-    updatePage(res);
-    
-    qs('sumTransit').textContent = '—'; qs('sumWait').textContent = '—'; qs('sumUnload').textContent = '—'; qs('sumCycle').textContent = '—'; 
-    qs('sumRemark').textContent = 'Saved. Use Refresh Dashboard for latest summaries.';
+    setMsg('Saving event...'); const res = await gs('saveInstantEvent', selectedPayloadFor(type)); updatePage(res);
+    if(qs('sumTransit')) qs('sumTransit').textContent = '—'; if(qs('sumWait')) qs('sumWait').textContent = '—'; if(qs('sumUnload')) qs('sumUnload').textContent = '—'; if(qs('sumCycle')) qs('sumCycle').textContent = '—'; if(qs('sumRemark')) qs('sumRemark').textContent = 'Saved. Use Refresh Dashboard for latest summaries.';
     setMsg('Event Saved!');
   } catch(e) { setMsg(e.message); }
 }
@@ -561,87 +484,42 @@ async function saveEvent(type){
 async function planDispatch(saveMode){
   try {
     setMsg(saveMode ? 'Saving dispatch order...' : 'Calculating dispatch plan...');
-    const payload = {
-      client: qs('dpClient').value, address: qs('dpAddress').value, sku: qs('dpSku').value,
-      qty: qs('dpQty').value, pump: qs('dpPump').value, priority: qs('dpPriority').value,
-      planDate: qs('dpDate').value, planTime: qs('dpTime').value, preferredTruck: qs('dpTruck').value,
-      distanceOverrideKm: qs('dpDistance').value, notes: qs('dpNotes').value, mode: saveMode ? 'save' : 'simulate'
-    };
-    const res = await gs('calculateDeliveryPlan', payload);
-    updatePage(res);
-    renderPlan(res);
+    const payload = { client: qs('dpClient').value, address: qs('dpAddress').value, sku: qs('dpSku').value, qty: qs('dpQty').value, pump: qs('dpPump').value, priority: qs('dpPriority').value, planDate: qs('dpDate').value, planTime: qs('dpTime').value, preferredTruck: qs('dpTruck').value, distanceOverrideKm: qs('dpDistance').value, notes: qs('dpNotes').value, mode: saveMode ? 'save' : 'simulate' };
+    const res = await gs('calculateDeliveryPlan', payload); updatePage(res); renderPlan(res);
     setMsg(saveMode && res.orderId ? `Saved order ${res.orderId}` : 'Dispatch plan ready.');
   } catch (e) { setMsg(e.message || String(e)); }
 }
 
-async function dispatchNow(orderId){
-  try {
-    setMsg('Dispatching...');
-    const res = await gs('dispatchOrderNow', orderId);
-    updatePage(res);
-    setMsg(res.message || 'Dispatched.');
-  } catch (e) { setMsg(e.message || String(e)); }
-}
+async function dispatchNow(orderId){ try { setMsg('Dispatching...'); const res = await gs('dispatchOrderNow', orderId); updatePage(res); setMsg(res.message || 'Dispatched.'); } catch (e) { setMsg(e.message || String(e)); } }
+async function saveSettings(){ try { setMsg('Saving settings...'); const payload = { truckCapacity: qs('stCap').value, avgSpeedKmph: qs('stSpeed').value, fixedTripBDT: qs('stFixed').value, perKmBDT: qs('stKm').value, pumpChargeBDT: qs('stPump').value, loadingChargeBDT: qs('stLoad').value, unloadingChargeBDT: qs('stUnload').value, idleCostPerHourBDT: qs('stIdle').value, contingencyPct: qs('stCont').value, loadingBufferMin: qs('stLoadBuf').value, unloadingBufferMin: qs('stUnloadBuf').value }; const res = await gs('saveCostSettings', payload); updatePage(res); setMsg('Settings saved.'); } catch (e) { setMsg(e.message || String(e)); } }
+async function refreshAll(){ try { setMsg('Refreshing...'); const res = await gs('getBootstrapData'); updatePage(res); setMsg(APP.error ? ('Loaded with warning: ' + APP.error) : 'Dashboard refreshed.'); } catch (e) { setMsg(e.message || String(e)); } }
 
-async function saveSettings(){
-  try {
-    setMsg('Saving settings...');
-    const payload = {
-      truckCapacity: qs('stCap').value, avgSpeedKmph: qs('stSpeed').value, fixedTripBDT: qs('stFixed').value, perKmBDT: qs('stKm').value, pumpChargeBDT: qs('stPump').value,
-      loadingChargeBDT: qs('stLoad').value, unloadingChargeBDT: qs('stUnload').value, idleCostPerHourBDT: qs('stIdle').value, contingencyPct: qs('stCont').value,
-      loadingBufferMin: qs('stLoadBuf').value, unloadingBufferMin: qs('stUnloadBuf').value
-    };
-    const res = await gs('saveCostSettings', payload);
-    updatePage(res);
-    setMsg('Settings saved.');
-  } catch (e) { setMsg(e.message || String(e)); }
-}
-
-async function refreshAll(){
-  try {
-    setMsg('Refreshing...');
-    const res = await gs('getBootstrapData');
-    updatePage(res);
-    setMsg(APP.error ? ('Loaded with warning: ' + APP.error) : 'Dashboard refreshed.');
-  } catch (e) { setMsg(e.message || String(e)); }
-}
-
-// =====================================================================
-// INITIALIZATION
-// =====================================================================
 async function boot(){
   try {
     initDates();
+    if (API_URL.includes("YOUR_URL_ID_HERE")) throw new Error("You must paste your Google Web App URL into the API_URL variable in index.html!");
     setMsg("Fetching data from API...");
-    const res = await gs('getBootstrapData');
-    updatePage(res);
+    const res = await gs('getBootstrapData'); updatePage(res);
     setMsg(res.error ? ('Warning: ' + res.error) : 'System Online.');
     
     ['foClient', 'dpClient'].forEach(id => {
+      if(!qs(id)) return;
       qs(id).addEventListener('change', async (e) => {
         const targetAddress = id === 'foClient' ? 'foAddress' : 'dpAddress';
-        try {
-          const addr = await gs('getClientAddressForWeb', e.target.value);
-          qs(targetAddress).value = addr || '';
-        } catch(err) { console.log(err); }
+        try { const addr = await gs('getClientAddressForWeb', e.target.value); qs(targetAddress).value = addr || ''; } catch(err) { console.log(err); }
       });
     });
 
-    showTab('dashboard', document.querySelector('.tabBtn.active'));
-    qs('fromDate').addEventListener('change', refreshAll);
-    qs('toDate').addEventListener('change', refreshAll);
+    const dTab = document.querySelector('.tabBtn.active');
+    if(dTab) showTab('dashboard', dTab);
+    if(qs('fromDate')) qs('fromDate').addEventListener('change', refreshAll); 
+    if(qs('toDate')) qs('toDate').addEventListener('change', refreshAll);
     setInterval(refreshAll, 60000);
 
   } catch (e) { setMsg("API Error: " + (e.message || String(e))); }
 }
 
-window.onload = boot;
-window.showTab = showTab;
-window.planDispatch = planDispatch;
-window.saveEvent = saveEvent;
-window.dispatchNow = dispatchNow;
-window.saveSettings = saveSettings;
-window.refreshAll = refreshAll;
+window.onload = boot; window.showTab = showTab; window.planDispatch = planDispatch; window.saveEvent = saveEvent; window.dispatchNow = dispatchNow; window.saveSettings = saveSettings; window.refreshAll = refreshAll;
 </script>
 </body>
 </html>
