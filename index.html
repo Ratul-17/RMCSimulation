@@ -48,7 +48,7 @@
     .mapWrap{ height:400px; border:1px solid var(--line); border-radius:16px; overflow:hidden; } #map{ height:100%; width:100%; }
     .bottomTable{ max-height:460px; overflow:auto; } .small{ font-size:12px; color:var(--muted); }
     .split{ display:grid; grid-template-columns:1.1fr .9fr; gap:14px; } .chartBox{ height:280px; }
-    .assign-row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; padding:12px; background:#f9fbfe; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; align-items:center;}
+    .assign-row{ display:grid; grid-template-columns: 1.5fr 1.5fr 1fr; gap:10px; padding:12px; background:#f9fbfe; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; align-items:center;}
     #statusMsg{ position:fixed; bottom:20px; right:20px; background:#123; color:#fff; padding:12px 20px; border-radius:8px; display:none; z-index:9999; box-shadow:0 10px 20px rgba(0,0,0,0.2);}
     @media (max-width:1200px){ .grid6,.cols2,.cols2b,.cols3,.formgrid,.formgrid2,.split{ grid-template-columns:1fr; } }
   </style>
@@ -57,14 +57,15 @@
 <div class="wrap">
   <div class="hero">
     <h1>ARMCL-01 Delivery Tracking Dashboard</h1>
-    <p>Live KPI dashboard, Order Creation, independent truck assignment, OSM routing, and operations tracking.</p>
+    <p>Live KPI dashboard, Cyclic Delivery Planning, independent truck assignment, and operations tracking.</p>
   </div>
 
   <div class="tabs">
-    <button class="tabBtn active" type="button" onclick="showTab('dashboard', this)">1. Live Dashboard</button>
-    <button class="tabBtn" type="button" onclick="showTab('dispatch', this)">2. Order Creation & Planning</button>
-    <button class="tabBtn" type="button" onclick="showTab('instant', this)">3. Operations Console</button>
-    <button class="tabBtn" type="button" onclick="showTab('settings', this)">4. Cost Model Settings</button>
+    <button class="tabBtn active" onclick="showTab('dashboard', this)">1. Live Dashboard</button>
+    <button class="tabBtn" onclick="showTab('orderCreate', this)">2. Order Creation</button>
+    <button class="tabBtn" onclick="showTab('dispatchCycles', this)">3. Dispatch Cycles & Assignment</button>
+    <button class="tabBtn" onclick="showTab('instant', this)">4. Operations Console</button>
+    <button class="tabBtn" onclick="showTab('settings', this)">5. Cost Model Settings</button>
   </div>
 
   <div id="dashboard" class="section active">
@@ -96,45 +97,71 @@
     </div>
   </div>
 
-  <div id="dispatch" class="section">
-    <div class="panel">
-      <h2>New Order Creation</h2>
-      <div class="formgrid">
-        <div><label>Client</label><select id="ocClient"><option value="">Loading...</option></select></div>
-        <div><label>Address</label><input id="ocAddress" type="text" placeholder="Auto-fills from Client..."></div>
-        <div><label>SKU</label><select id="ocSku"><option value="">Loading...</option></select></div>
-        <div><label>Quantity (CFT)</label><input id="ocQty" type="number" min="1" step="0.01"></div>
-        <div><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
-        <div><label>Target Date</label><input id="ocDate" type="date"></div>
-        <div><label>Target Time</label><input id="ocTime" type="time"></div>
-        <div><label>Distance Override (km)</label><input id="ocOverride" type="number" placeholder="Optional"></div>
-        <div><label>Notes</label><input id="ocNotes" type="text"></div>
-      </div>
-      <button onclick="calculateRequirements()" style="margin-top:16px; width:auto; padding:12px 24px;">Calculate Route & Trucks Needed</button>
-    </div>
-
-    <div class="cols2" id="assignmentSection" style="display:none;">
-      <div class="panel">
-        <h2>Mapping & Requirements</h2>
-        <div class="mapWrap"><div id="map"></div></div>
-        <div style="display:flex; gap:15px; margin-top:10px;">
-            <div class="tag ok" id="routeDist">Distance: -</div>
-            <div class="tag ok" id="routeEta">ETA: -</div>
-            <div class="tag warn" style="font-weight:bold; font-size:14px;" id="trucksReq">Trucks Needed: -</div>
+  <div id="orderCreate" class="section">
+    <div class="cols2">
+        <div class="panel">
+          <h2>Create New Master Order</h2>
+          <div class="formgrid">
+            <div><label>Client</label><select id="ocClient"><option value="">Loading...</option></select></div>
+            <div style="grid-column: span 2;"><label>Address</label><input id="ocAddress" type="text" placeholder="Auto-fills from Client..."></div>
+            <div><label>SKU</label><select id="ocSku"><option value="">Loading...</option></select></div>
+            <div><label>Total Quantity (CFT)</label><input id="ocQty" type="number" min="1" step="0.01"></div>
+            <div><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
+            <div><label>Target Date</label><input id="ocDate" type="date"></div>
+            <div><label>Target Time</label><input id="ocTime" type="time"></div>
+            <div><label>Distance Override (km)</label><input id="ocOverride" type="number" placeholder="Optional"></div>
+            <div style="grid-column: span 3;"><label>Notes</label><input id="ocNotes" type="text"></div>
+          </div>
+          <button onclick="calculateRequirements()" style="margin-top:16px; width:100%;">Step 1: Calculate Route & Estimated Needs</button>
         </div>
-        <div id="planCost" class="small muted" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;"></div>
+
+        <div class="panel" id="ocResultSection" style="display:none; border:2px solid var(--brand2);">
+          <h2>Route & Requirement Analysis</h2>
+          <div class="mapWrap"><div id="map"></div></div>
+          <div style="display:flex; gap:15px; margin-top:10px;">
+              <div class="tag ok" id="routeDist">Distance: -</div>
+              <div class="tag ok" id="routeEta">ETA: -</div>
+              <div class="tag warn" style="font-weight:bold; font-size:14px;" id="trucksReq">Est. Trucks Needed: -</div>
+          </div>
+          <div id="planCost" class="small muted" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;"></div>
+          <button onclick="saveMasterOrder()" style="margin-top:16px; width:100%;" class="ok">Step 2: Save Master Order</button>
+        </div>
+    </div>
+  </div>
+
+  <div id="dispatchCycles" class="section">
+    <div class="cols2">
+      <div class="panel">
+        <h2>1. Select Active Order</h2>
+        <select id="dcOrder" style="background:#f9fbfe; border-color:#d7e2ee; margin-bottom:15px;"><option value="">Loading Active Orders...</option></select>
+        
+        <div id="dcStats" style="display:none;">
+            <div class="miniGrid" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:15px;">
+                <div class="mini"><div class="label">Total Ordered</div><div class="value" id="dcTotal">0</div></div>
+                <div class="mini"><div class="label">Delivered/Dispatched</div><div class="value" style="color:var(--ok)" id="dcDisp">0</div></div>
+                <div class="mini"><div class="label">Remaining Pending</div><div class="value" style="color:var(--bad)" id="dcRem">0</div></div>
+            </div>
+            
+            <div style="display:flex; gap:15px; align-items:flex-end; border-top:1px solid var(--line); padding-top:15px;">
+                <div style="flex:1;">
+                    <label>How many trucks to dispatch in this cycle?</label>
+                    <input id="dcCount" type="number" min="1" value="1">
+                </div>
+                <button onclick="buildCycleRows()" class="secondary" style="width:auto; padding:12px 20px;">Load Assignment Rows</button>
+            </div>
+        </div>
       </div>
 
-      <div class="panel">
-        <h2>Assign Available Trucks & Drivers</h2>
-        <p class="small muted" style="margin-top:0;">Only resources currently at the plant are shown.</p>
-        <div id="assignmentContainer"></div>
-        <button onclick="saveOrder()" style="margin-top:16px; width:100%;" class="ok">Save Order to Dispatch Log</button>
+      <div class="panel" id="dcAssignmentPanel" style="display:none; border:2px solid var(--brand2);">
+        <h2>2. Assign Trucks & Drivers</h2>
+        <p class="small muted" style="margin-top:0;">Only resources currently available at the plant are shown.</p>
+        <div id="dcAssignmentContainer"></div>
+        <button onclick="submitDispatchCycle()" style="margin-top:16px; width:100%;" class="ok">Dispatch This Cycle to Centralized Data</button>
       </div>
     </div>
-
+    
     <div class="panel">
-        <h2>Pending Dispatch Orders</h2>
+        <h2>Active Master Orders (Pending Completion)</h2>
         <div class="bottomTable" id="dispatchTable"></div>
     </div>
   </div>
@@ -143,7 +170,7 @@
     <div class="cols2">
       <div class="panel" style="border:2px solid var(--brand2)">
         <h2>Instant Input (Operations Console)</h2>
-        <p class="small muted" style="margin-top:0; margin-bottom:15px;">Update the live status of scheduled and dispatched trips.</p>
+        <p class="small muted" style="margin-top:0; margin-bottom:15px;">Update the live status of dispatched cyclic trips.</p>
         <div style="margin-bottom:14px;">
             <label>1. Select Active Trip</label>
             <select id="iiTrip" style="background:#f9fbfe; border-color:#d7e2ee;"><option value="">Loading active trips...</option></select>
@@ -172,10 +199,9 @@
       <div class="panel">
         <h2>Trip Management Rules</h2>
         <ul style="font-size:14px; color:var(--text); line-height:1.6;">
-            <li><b>Active Trips:</b> Once you hit "Dispatch Now", the trip appears here.</li>
+            <li><b>Active Trips:</b> Once you hit "Dispatch Cycle", the trips immediately appear here.</li>
             <li><b>Dropdown Filtering:</b> A truck/driver stays locked to this trip until you submit a <b>Factory Return</b>.</li>
-            <li><b>Live Boards:</b> Every submission here instantly updates the Dashboard, derived sheets (MTS, Truck Output), and cost efficiencies.</li>
-            <li><b>Accuracy:</b> Always ensure the Date and Time fields are correct before clicking submit to prevent SMV and Cycle time anomalies.</li>
+            <li><b>Live Boards:</b> Every submission here instantly updates the Dashboard, derived sheets (MTS, Truck Output), and Order Completion %.</li>
         </ul>
       </div>
     </div>
@@ -212,7 +238,7 @@
 // =====================================================================
 // API CONFIGURATION
 // =====================================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwTar_0KRRR6XIMt3Y5nMBdbWXP_hCh8508qrYR16tnTkUmPF8D2i8O6BIC2GfuxeVCsg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwsM1uTrCjBU55Wn07FxEbbgo0dyHpOdRGWvAIXzSmGfWv1WIlVMwymTbzw1PhnllORlg/exec";
 
 let APP = {};
 let MAP = null;
@@ -254,7 +280,7 @@ function showTab(tabId, btn){
   qs(tabId).style.display = 'block';
   qs(tabId).classList.add('active');
   btn.classList.add('active');
-  if (tabId === 'dispatch' && MAP) setTimeout(() => MAP.invalidateSize(), 200);
+  if (tabId === 'orderCreate' && MAP) setTimeout(() => MAP.invalidateSize(), 200);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -263,8 +289,7 @@ function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
 function money(v){ return num(v).toLocaleString('en-GB', {maximumFractionDigits: 2}); }
 
 function initDates(){
-  const today = new Date(); 
-  const t = today.toTimeString().slice(0,5);
+  const today = new Date(); const t = today.toTimeString().slice(0,5);
   ['ocDate','iiDate'].forEach(id => { if(qs(id)) qs(id).valueAsDate = today; });
   ['ocTime','iiTime'].forEach(id => { if(qs(id)) qs(id).value = t; });
 }
@@ -284,30 +309,36 @@ function statusClass(s){
 }
 
 // =====================================================================
-// UI RENDERERS (DASHBOARD)
+// UI RENDERERS
 // =====================================================================
 function buildDropdowns() {
     if(qs('ocClient')) qs('ocClient').innerHTML = '<option value="">Select client...</option>' + (APP.clients||[]).map(c => `<option>${esc(c)}</option>`).join('');
     if(qs('ocSku')) qs('ocSku').innerHTML = '<option value="">Select SKU...</option>' + (APP.skus||[]).map(s => `<option>${esc(s)}</option>`).join('');
     
+    if(qs('dcOrder')) {
+        const orders = APP.activeOrders || [];
+        qs('dcOrder').innerHTML = '<option value="">Select active order...</option>' + 
+            orders.map(o => `<option value="${o.orderId}">[${o.orderId}] ${esc(o.client)} — Rem: ${money(o.remainingQty)} CFT</option>`).join('');
+    }
+
     if(qs('dispatchTable')) {
-        const dRows = APP.dispatchOrders || [];
-        qs('dispatchTable').innerHTML = dRows.length ? `<table><tr><th>Order ID</th><th>Client</th><th>Qty</th><th>Dist</th><th>Assignments</th><th>Action</th></tr>` + 
-            dRows.map(r => `<tr><td>${r.orderId}</td><td>${r.client}</td><td>${r.qty}</td><td>${r.distanceKm}</td><td>${r.assignments.map(a=>a.truck).join(', ')}</td><td><button class="secondary" style="padding:6px 12px" onclick="dispatchNow('${r.orderId}')">Dispatch Now</button></td></tr>`).join('') + `</table>` 
-            : '<p class="small muted">No pending orders.</p>';
+        const oRows = APP.activeOrders || [];
+        qs('dispatchTable').innerHTML = oRows.length ? `<table><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips Left</th><th>Status</th></tr>` + 
+            oRows.map(r => `<tr><td>${r.orderId}</td><td>${r.client}</td><td>${money(r.totalQty)}</td><td>${money(r.dispatchedQty)}</td><td style="color:var(--bad); font-weight:bold;">${money(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td><span class="tag ${statusClass(r.status)}">${r.status}</span></td></tr>`).join('') + `</table>` 
+            : '<p class="small muted">No active orders found.</p>';
     }
 
     if(qs('iiTrip')) {
         const trips = APP.activeTrips || [];
         qs('iiTrip').innerHTML = '<option value="">Select an active trip...</option>' + 
-            trips.map(t => `<option value="${t.rowNo}">Row ${t.rowNo} | ${t.orderId} | Trk: ${t.truck} | Drv: ${t.driver} | Stat: ${t.status}</option>`).join('');
+            trips.map(t => `<option value="${t.rowNo}">Row ${t.rowNo} | [${t.orderId}] | Trk: ${t.truck} | Drv: ${t.driver} | Stat: ${t.status}</option>`).join('');
     }
 }
 
 function renderDashboard() {
   const d = APP.dashboard || {};
   if(qs('kpiRow')){
-      const cards = [['Fleet Utilization %', (d.utilPct||0)+'%'], ['Active Trucks', d.activeTrucks||0], ['Trucks Used Today', Math.round(((d.utilPct||0)/100)*(d.activeTrucks||0))], ['Total Trips Today', d.completedToday||0], ['In Transit', d.inTransit||0], ['Waiting / Unloading', (d.waiting||0) + (d.unloading||0)], ['Avg Transit', d.avgTransit||0], ['Avg Wait', d.avgWait||0], ['Avg Unload', d.avgUnload||0], ['Avg Cycle', d.avgCycle||0], ['Total CFT', d.totalCft||0], ['SMV Efficiency', (d.smvEfficiency||0)+'%']];
+      const cards = [['Fleet Utilization %', (d.utilPct||0)+'%'], ['Active Trucks', d.activeTrucks||0], ['Trucks Used Today', Math.round(((d.utilPct||0)/100)*(d.activeTrucks||0))], ['Total Trips Today', d.completedToday||0], ['In Transit', d.inTransit||0], ['Waiting / Unloading', (d.waiting||0) + (d.unloading||0)], ['Avg Transit', d.avgTransit||0], ['Avg Wait', d.avgWait||0], ['Avg Unload', d.avgUnload||0], ['Avg Cycle', d.avgCycle||0], ['Total CFT', money(d.totalCft||0)], ['SMV Efficiency', (d.smvEfficiency||0)+'%']];
       qs('kpiRow').innerHTML = cards.map(([a,b]) => `<div class="card kpi"><div class="label">${esc(a)}</div><div class="value">${esc(String(b))}</div></div>`).join('');
   }
   
@@ -347,7 +378,7 @@ function renderDashboard() {
 }
 
 // =====================================================================
-// ORDER CREATION LOGIC
+// ORDER CREATION LOGIC (Tab 2)
 // =====================================================================
 if(qs('ocClient')) qs('ocClient').addEventListener('change', async (e) => {
     qs('ocAddress').value = await gs('getClientAddressForWeb', e.target.value);
@@ -366,75 +397,118 @@ async function calculateRequirements() {
         
         qs('routeDist').textContent = `Distance: ${res.distanceKm} km`;
         qs('routeEta').textContent = `ETA: ${res.etaMin} min`;
-        qs('trucksReq').textContent = `Trucks Needed: ${res.trucksNeeded}`;
+        qs('trucksReq').textContent = `Est. Trucks Needed: ${res.trucksNeeded}`;
         
         if(res.costs) {
             const c = res.costs;
-            qs('planCost').innerHTML = `<b>Simulated Cost Model</b> — Fixed: ${money(c.fixed)} | Road: ${money(c.road)} | Time: ${money(c.time)} | Total BDT: <b>${money(c.total)}</b> (${money(c.perCft)} / CFT)`;
+            qs('planCost').innerHTML = `<b>Estimated Cost Model</b> — Fixed: ${money(c.fixed)} | Road: ${money(c.road)} | Time: ${money(c.time)} | Total BDT: <b>${money(c.total)}</b> (${money(c.perCft)} / CFT)`;
         }
         
+        qs('ocResultSection').style.display = 'block';
         ensureMap();
         if(ROUTE_LAYER) MAP.removeLayer(ROUTE_LAYER);
         if(res.coords && res.coords.length) {
             ROUTE_LAYER = L.polyline(res.coords, {color:'blue', weight:5}).addTo(MAP);
             MAP.fitBounds(ROUTE_LAYER.getBounds(), {padding:[20,20]});
         }
-        
-        const tOpts = '<option value="">Select Truck</option>' + (APP.availableTrucks||[]).map(t => `<option>${esc(t)}</option>`).join('');
-        const dOpts = '<option value="">Select Driver</option>' + (APP.availableDrivers||[]).map(d => `<option>${esc(d)}</option>`).join('');
-        
-        let html = '';
-        for(let i=0; i<res.trucksNeeded; i++) {
-            html += `<div class="assign-row" id="arow_${i}">
-                <div><label>Truck ${i+1}</label><select class="sel-trk">${tOpts}</select></div>
-                <div><label>Driver ${i+1}</label><select class="sel-drv">${dOpts}</select></div>
-            </div>`;
-        }
-        qs('assignmentContainer').innerHTML = html;
-        qs('assignmentSection').style.display = 'grid';
-        
     } catch(err) { toast(err.message, true); }
 }
 
-async function saveOrder() {
-    const assigns = []; let valid = true;
-    for(let i=0; i<CURRENT_CALC.trucksNeeded; i++) {
-        const t = document.querySelector(`#arow_${i} .sel-trk`).value;
-        const d = document.querySelector(`#arow_${i} .sel-drv`).value;
-        if(!t || !d) valid = false;
-        assigns.push({truck: t, driver: d});
-    }
-    if(!valid) return toast("You must assign a truck and driver for all rows.", true);
-
+async function saveMasterOrder() {
     const payload = {
         client: qs('ocClient').value, address: qs('ocAddress').value,
         sku: qs('ocSku').value, qty: qs('ocQty').value, pump: qs('ocPump').value,
         date: qs('ocDate').value, time: qs('ocTime').value, notes: qs('ocNotes').value,
-        distanceKm: CURRENT_CALC.distanceKm, etaMin: CURRENT_CALC.etaMin,
-        trucksNeeded: CURRENT_CALC.trucksNeeded, assignments: assigns
+        distanceKm: CURRENT_CALC.distanceKm, etaMin: CURRENT_CALC.etaMin
     };
-    
     try {
-        const res = await gs('saveOrder', payload);
+        const res = await gs('saveMasterOrder', payload);
         APP = res.data;
         buildDropdowns(); renderDashboard();
-        toast("Order Saved! Check Pending Dispatch table.");
-        qs('assignmentSection').style.display = 'none';
+        toast("Master Order Saved!");
+        qs('ocResultSection').style.display = 'none';
         qs('ocQty').value = ''; qs('ocOverride').value = '';
     } catch(err) { toast(err.message, true); }
 }
 
-async function dispatchNow(orderId) {
+// =====================================================================
+// DISPATCH CYCLES & ASSIGNMENT (Tab 3)
+// =====================================================================
+if(qs('dcOrder')) qs('dcOrder').addEventListener('change', (e) => {
+    const orderId = e.target.value;
+    if(!orderId) { qs('dcStats').style.display = 'none'; qs('dcAssignmentPanel').style.display = 'none'; return; }
+    
+    const o = APP.activeOrders.find(x => x.orderId === orderId);
+    if(o) {
+        qs('dcTotal').textContent = money(o.totalQty);
+        qs('dcDisp').textContent = money(o.dispatchedQty);
+        qs('dcRem').textContent = money(o.remainingQty);
+        qs('dcStats').style.display = 'block';
+    }
+});
+
+function buildCycleRows() {
+    const count = Number(qs('dcCount').value) || 1;
+    const o = APP.activeOrders.find(x => x.orderId === qs('dcOrder').value);
+    if(!o) return toast("Select an order first.", true);
+
+    const tOpts = '<option value="">Select Truck</option>' + (APP.availableTrucks||[]).map(t => `<option data-cap="${t.cap}" value="${t.no}">${esc(t.no)} (Cap: ${t.cap})</option>`).join('');
+    const dOpts = '<option value="">Select Driver</option>' + (APP.availableDrivers||[]).map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+    
+    let html = '';
+    for(let i=0; i<count; i++) {
+        html += `<div class="assign-row" id="cyc_row_${i}">
+            <div><label>Truck ${i+1}</label><select class="cyc-trk" onchange="autoFillCap(${i}, this)">${tOpts}</select></div>
+            <div><label>Driver ${i+1}</label><select class="cyc-drv">${dOpts}</select></div>
+            <div><label>Load Qty</label><input type="number" class="cyc-qty" placeholder="CFT" min="1"></div>
+        </div>`;
+    }
+    qs('dcAssignmentContainer').innerHTML = html;
+    qs('dcAssignmentPanel').style.display = 'block';
+}
+
+function autoFillCap(idx, selectEl) {
+    const selected = selectEl.options[selectEl.selectedIndex];
+    const cap = selected.getAttribute('data-cap');
+    if(cap) document.querySelector(`#cyc_row_${idx} .cyc-qty`).value = cap;
+}
+
+async function submitDispatchCycle() {
+    const orderId = qs('dcOrder').value;
+    if(!orderId) return toast("Select an order.", true);
+    
+    const count = Number(qs('dcCount').value) || 1;
+    const assigns = []; let valid = true; let totalDisp = 0;
+    
+    for(let i=0; i<count; i++) {
+        const t = document.querySelector(`#cyc_row_${i} .cyc-trk`).value;
+        const d = document.querySelector(`#cyc_row_${i} .cyc-drv`).value;
+        const q = Number(document.querySelector(`#cyc_row_${i} .cyc-qty`).value);
+        if(!t || !d || q <= 0) valid = false;
+        assigns.push({truck: t, driver: d, qty: q});
+        totalDisp += q;
+    }
+    
+    if(!valid) return toast("All assigned rows must have a Truck, Driver, and valid Qty.", true);
+    
+    const o = APP.activeOrders.find(x => x.orderId === orderId);
+    if(totalDisp > o.remainingQty) {
+        if(!confirm(`Warning: You are dispatching ${totalDisp} CFT, but only ${o.remainingQty} CFT is remaining. Proceed anyway?`)) return;
+    }
+
     try {
-        const res = await gs('dispatchOrderNow', orderId);
+        const res = await gs('dispatchPartialOrder', { orderId: orderId, assignments: assigns });
         APP = res.data;
         buildDropdowns(); renderDashboard();
-        toast(`Order ${orderId} Scheduled! Trips added to active list.`);
-    } catch(e) { toast(e.message, true); }
+        toast("Cycle Dispatched! Trips added to active list.");
+        qs('dcAssignmentPanel').style.display = 'none';
+        qs('dcStats').style.display = 'none';
+        qs('dcOrder').value = '';
+    } catch(err) { toast(err.message, true); }
 }
 
 // =====================================================================
-// OPERATIONS INSTANT INPUT
+// OPERATIONS INSTANT INPUT (Tab 4)
 // =====================================================================
 if(qs('iiEvent')) qs('iiEvent').addEventListener('change', (e) => {
     qs('iiDistWrap').style.display = (e.target.value === 'return') ? 'block' : 'none';
