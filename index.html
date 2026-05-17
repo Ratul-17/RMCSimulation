@@ -5,7 +5,7 @@
 <title>ARMCL-01 | Operations</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -19,7 +19,7 @@
   --red:#f06060;--red-soft:rgba(240,96,96,.12);
   --blue:#60a5fa;--blue-soft:rgba(96,165,250,.12);
   --sw:264px;--hh:60px;--r:9px;--rL:14px;
-  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --font:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
 }
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
@@ -204,7 +204,6 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="hdr">
   <button class="hbg" onclick="toggleSb()">&#9776;</button>
   <div class="hdr-logo">
@@ -217,10 +216,8 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
   <div class="hdr-r"><div class="pulse-dot">LIVE</div></div>
 </header>
 
-<!-- BODY -->
 <div class="body">
 
-  <!-- SIDEBAR -->
   <nav class="sb" id="sb">
     <div class="sb-sec">
       <div class="sb-lbl">Operations</div>
@@ -236,11 +233,9 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
     <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.0<br>Dhour Plant, Dhaka, Bangladesh</p></div>
   </nav>
 
-  <!-- MAIN -->
   <main class="main" id="mainEl">
     <div class="wrap">
 
-      <!-- ═══ DASHBOARD ═══ -->
       <div id="dash" class="sec on">
         <div class="ph">
           <div><div class="pt">Live Dashboard</div><div class="ps">Real&#8209;time fleet &amp; delivery intelligence</div></div>
@@ -274,16 +269,13 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
-      <!-- ═══ ORDER CREATION ═══ -->
       <div id="order" class="sec">
         <div class="ph">
           <div><div class="pt">Create Master Order</div><div class="ps">Auto&#8209;geocodes from sheet address &rarr; shows map &rarr; routes via OSRM</div></div>
         </div>
         <div class="g2">
-          <!-- FORM -->
           <div class="pn">
             <div class="pnh"><div class="pnt">Order Details</div></div>
-            <!-- geocode status bar -->
             <div id="geoBar" class="gs-bar" style="display:none">
               <span id="geoIcon"></span><span id="geoMsg"></span>
             </div>
@@ -303,7 +295,6 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             </div>
           </div>
 
-          <!-- RESULT -->
           <div id="resultSec" style="display:none">
             <div class="rp">
               <div class="pnh" style="margin-bottom:13px;padding-bottom:11px;border-bottom:1px solid var(--edge)">
@@ -331,7 +322,6 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
-      <!-- ═══ DISPATCH ═══ -->
       <div id="dispatch" class="sec">
         <div class="ph"><div><div class="pt">Dispatch Cycles &amp; Assignment</div><div class="ps">Allocate available trucks and drivers to active orders</div></div></div>
         <div class="g2">
@@ -363,7 +353,6 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
-      <!-- ═══ OPS CONSOLE ═══ -->
       <div id="ops" class="sec">
         <div class="ph"><div><div class="pt">Operations Console</div><div class="ps">Live status updates for active delivery trips</div></div></div>
         <div class="g2">
@@ -400,7 +389,6 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
-      <!-- ═══ COST MODEL ═══ -->
       <div id="cfg" class="sec">
         <div class="ph"><div><div class="pt">Cost Model Settings</div><div class="ps">Configure plant parameters and BDT cost factors</div></div></div>
         <div class="pn">
@@ -435,7 +423,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbw4uChxnmKSterKOAl73edqddznuzgNVdp2rsJcsSiu1wfIfRNB7Qn-PO3SuLc5uLuung/exec";
+const API = "https://script.google.com/macros/s/AKfycbwrK5b1IfgF9eiUgvbJOXbwasTmHK5Uv77KWF6D_-T2qUpnNQW5xdM5_pCA5To9dPvt-A/exec";
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
