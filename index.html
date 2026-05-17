@@ -1,602 +1,864 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>ARMCL-01 Delivery Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8">
+<title>ARMCL-01 | Operations</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#0a0e1a;--ink2:#111827;--ink3:#1a2235;--ink4:#202d42;
+  --edge:#263349;--edge2:#2e3d56;--text:#e2e8f5;--sub:#7e93b5;--dim:#4a5d7a;
+  --gold:#f5a623;--gold2:#d4891a;--gold-glow:rgba(245,166,35,.18);--gold-soft:rgba(245,166,35,.08);
+  --cyan:#34d1c0;--cyan-soft:rgba(52,209,192,.12);
+  --green:#2dd4a0;--green-soft:rgba(45,212,160,.12);
+  --red:#f06060;--red-soft:rgba(240,96,96,.12);
+  --blue:#60a5fa;--blue-soft:rgba(96,165,250,.12);
+  --sw:264px;--hh:60px;--r:9px;--rL:14px;
+  --font:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--ink);font-family:var(--font);color:var(--text);display:flex;flex-direction:column}
 
-  <style>
-    :root{ --bg:#f4f7fb; --card:#fff; --text:#10233e; --muted:#6b7a90; --line:#e5ebf3; --brand:#16345f; --brand2:#0f7c90; --ok:#1a9b58; --warn:#e39b20; --bad:#d64545; }
-    *{box-sizing:border-box} 
-    body{ margin:0; background:var(--bg); font-family:Arial,sans-serif; color:var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    
-    /* --- NEW APP LAYOUT --- */
-    .top-header { display: flex; align-items: center; background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #fff; padding: 15px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0; }
-    .hamburger { background: transparent; border: none; color: #fff; font-size: 24px; cursor: pointer; margin-right: 15px; padding: 0; display: none; }
-    .top-header h1 { margin: 0; font-size: 20px; }
-    .top-header p { margin: 4px 0 0; opacity: 0.9; font-size: 13px; }
+/* grid bg texture */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(52,209,192,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(52,209,192,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
 
-    .app-container { display: flex; flex: 1; overflow: hidden; }
-    .sidebar { width: 280px; background: #fff; border-right: 1px solid var(--line); padding: 20px; overflow-y: auto; flex-shrink: 0; transition: transform 0.3s ease; z-index: 9; }
-    .main-content { flex: 1; overflow-y: auto; padding: 20px; background: var(--bg); }
-    .wrap { max-width: 1400px; margin: 0 auto; }
-    
-    .tabs { display: flex; flex-direction: column; gap: 10px; }
-    .tabBtn { border: none; border-radius: 10px; padding: 14px 16px; cursor: pointer; background: transparent; color: var(--text); font-weight: 700; text-align: left; transition: all 0.2s; }
-    .tabBtn:hover { background: #f4f7fb; }
-    .tabBtn.active { background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #fff; box-shadow: 0 4px 10px rgba(15,124,144,0.3); }
+/* ── HEADER ─────────────────────────────── */
+.hdr{height:var(--hh);background:var(--ink2);border-bottom:1px solid var(--edge);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;position:relative;z-index:50}
+.hdr-logo{display:flex;align-items:center;gap:11px}
+.hdr-mark{width:34px;height:34px;border-radius:7px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:grid;place-items:center;font-size:16px;flex-shrink:0;box-shadow:0 0 18px var(--gold-glow)}
+.hdr-title{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:.08em;color:var(--text)}
+.hdr-sub{font-size:10.5px;color:var(--sub);margin-top:1px;letter-spacing:.04em}
+.hdr-r{margin-left:auto;display:flex;align-items:center;gap:14px}
+.pulse-dot{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--green);letter-spacing:.06em}
+.pulse-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pdot 2.2s ease infinite}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
+.hbg{background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer;display:none;padding:4px;width:auto;transition:color .15s}
+.hbg:hover{color:var(--text)}
 
-    @media (max-width: 900px) {
-      .hamburger { display: block; }
-      .sidebar { position: fixed; left: 0; top: 76px; bottom: 0; transform: translateX(-100%); box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
-      .sidebar.open { transform: translateX(0); }
-    }
-    /* ---------------------- */
+/* ── LAYOUT ───────────────────────────── */
+.body{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
 
-    .section{ display:none !important; } .section.active{ display:block !important; }
-    .grid6{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:16px; }
-    .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:0 8px 18px rgba(16,35,62,.05); }
-    .kpi .label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-    .kpi .value{ font-size:28px; font-weight:700; margin-top:8px; }
-    .panel{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; margin-bottom:16px; box-shadow:0 8px 18px rgba(16,35,62,.05); }
-    .panel h2{ margin:0 0 16px; font-size:18px; border-bottom:1px solid var(--line); padding-bottom:10px;}
-    .cols2{ display:grid; grid-template-columns:1.05fr .95fr; gap:20px; }
-    .cols2b{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .cols3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
-    .formgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-    .formgrid2{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
-    label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; font-weight:bold; text-transform:uppercase; }
-    input,select,textarea,button{ width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line); font-size:14px; background:#fff; outline:none; }
-    input:focus, select:focus{ border-color:var(--brand2); }
-    button{ cursor:pointer; border:none; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; font-weight:700; }
-    button:disabled{ opacity:0.6; cursor:not-allowed;}
-    .secondary{ background:#eef4fb; color:#123; border:1px solid #d7e2ee; }
-    .ghost{ background:#f8fbff; color:#123; border:1px solid #d9e3ee; }
-    .miniGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-    .mini{ border:1px dashed var(--line); background:#fafcff; border-radius:14px; padding:12px; }
-    .mini .label{ font-size:12px; color:var(--muted); }
-    .mini .value{ font-size:20px; font-weight:700; margin-top:6px; }
-    .box{ border:1px solid var(--line); border-radius:16px; padding:14px; background:#fbfdff; min-height:100px; }
-    table{ width:100%; border-collapse:collapse; }
-    th,td{ padding:12px 8px; border-bottom:1px solid var(--line); font-size:13px; text-align:left; vertical-align:top; }
-    th{ background:#f9fbfe; position:sticky; top:0; z-index:1; }
-    .tag{ display:inline-block; padding:4px 8px; border-radius:999px; background:#edf4ff; color:#245; font-size:12px; }
-    .ok{background:#eaf8ef;color:var(--ok)} .warn{background:#fff4df;color:var(--warn)} .bad{background:#fdeaea;color:var(--bad)}
-    .muted{color:var(--muted)}
-    .mapWrap{ height:400px; border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:10px; } #map{ height:100%; width:100%; }
-    .bottomTable{ max-height:460px; overflow:auto; } .small{ font-size:12px; color:var(--muted); }
-    .split{ display:grid; grid-template-columns:1.1fr .9fr; gap:14px; } .chartBox{ height:280px; }
-    .assign-row{ display:grid; grid-template-columns: 1.5fr 1.5fr 1fr; gap:10px; padding:12px; background:#f9fbfe; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; align-items:center;}
-    #statusMsg{ position:fixed; bottom:20px; right:20px; background:#123; color:#fff; padding:12px 20px; border-radius:8px; display:none; z-index:9999; box-shadow:0 10px 20px rgba(0,0,0,0.2);}
-    @media (max-width:1200px){ .grid6,.cols2,.cols2b,.cols3,.formgrid,.formgrid2,.split{ grid-template-columns:1fr; } }
-  </style>
+/* ── SIDEBAR ──────────────────────────── */
+.sb{width:var(--sw);background:var(--ink2);border-right:1px solid var(--edge);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:transform .26s cubic-bezier(.4,0,.2,1);z-index:40}
+.sb-sec{padding:14px 10px 6px}
+.sb-lbl{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:0 8px;margin-bottom:5px}
+.nb{display:flex;align-items:center;gap:10px;width:100%;padding:10px 10px;border:none;border-radius:var(--r);background:transparent;color:var(--sub);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;text-align:left;transition:all .16s;position:relative}
+.nb:hover{background:var(--ink3);color:var(--text)}
+.nb.on{background:var(--gold-soft);color:var(--gold);font-weight:600}
+.nb.on::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:2.5px;border-radius:2px;background:var(--gold);box-shadow:0 0 8px var(--gold-glow)}
+.ni{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.sb-ft{margin-top:auto;padding:14px 10px;border-top:1px solid var(--edge)}
+.sb-ft p{font-size:10.5px;color:var(--dim);line-height:1.6}
+
+/* ── MAIN ─────────────────────────────── */
+.main{flex:1;overflow-y:auto;overflow-x:hidden;padding:22px;background:var(--ink)}
+.wrap{max-width:1440px;margin:0 auto}
+
+/* ── SECTIONS ─────────────────────────── */
+.sec{display:none}.sec.on{display:block}
+
+/* ── PAGE HDR ─────────────────────────── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px}
+.pt{font-size:24px;font-weight:700;letter-spacing:-.3px}
+.ps{font-size:12.5px;color:var(--sub);margin-top:4px}
+.rbtn{display:flex;align-items:center;gap:7px;padding:8px 15px;border-radius:var(--r);background:var(--ink3);border:1px solid var(--edge);color:var(--sub);font-size:12.5px;font-weight:500;cursor:pointer;width:auto;transition:all .16s}
+.rbtn:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ── KPI GRID ─────────────────────────── */
+.kg{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:20px}
+.kc{background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:15px;position:relative;overflow:hidden;animation:fu .45s ease both;transition:transform .18s,border-color .18s}
+.kc:hover{transform:translateY(-2px);border-color:var(--edge2)}
+.kc::after{content:'';position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:radial-gradient(circle,var(--gold-soft) 0%,transparent 70%);pointer-events:none}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.kl{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.kv{font-family:var(--mono);font-size:28px;font-weight:500;margin-top:9px;line-height:1}
+.kc.ok{border-color:rgba(45,212,160,.22)}.kc.wa{border-color:rgba(245,166,35,.22)}.kc.ba{border-color:rgba(240,96,96,.22)}
+
+/* ── PANELS ───────────────────────────── */
+.pn{background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:20px;margin-bottom:15px}
+.pnh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--edge)}
+.pnt{font-size:15px;font-weight:700;letter-spacing:-.1px}
+.pbg{font-size:10px;padding:3px 9px;border-radius:99px;background:var(--gold-soft);color:var(--gold);font-weight:700;font-family:var(--mono)}
+
+/* ── GRID HELPERS ─────────────────────── */
+.g2{display:grid;grid-template-columns:1.1fr .9fr;gap:15px}
+.g2e{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px}
+.s2{grid-column:span 2}.s3{grid-column:span 3}
+.cb{height:250px;position:relative}
+
+/* ── FLEET MINI ───────────────────────── */
+.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.fc{background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:13px}
+.fc .l{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.fc .v{font-family:var(--mono);font-size:24px;font-weight:500;margin-top:6px}
+
+/* ── FORMS ────────────────────────────── */
+.fg2{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.fg2b{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}
+.fg2c{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.fi{display:flex;flex-direction:column;gap:5px}
+.fi label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--sub)}
+input,select,textarea{width:100%;padding:10px 12px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:13.5px;transition:border-color .16s,box-shadow .16s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+select option{background:var(--ink2)}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.5)}
+textarea{min-height:72px;resize:vertical}
+
+/* ── BUTTONS ──────────────────────────── */
+button{cursor:pointer;font-family:var(--font);transition:all .16s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:var(--r);border:none;font-size:13.5px;font-weight:600;width:100%}
+.bp{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a0e1a;box-shadow:0 4px 18px var(--gold-soft)}
+.bp:hover{filter:brightness(1.07);transform:translateY(-1px);box-shadow:0 6px 24px var(--gold-glow)}
+.bs{background:var(--ink3);color:var(--text);border:1px solid var(--edge)}
+.bs:hover{border-color:var(--gold);color:var(--gold)}
+.bg{background:var(--green);color:#0a0e1a;box-shadow:0 4px 14px var(--green-soft)}
+.bg:hover{filter:brightness(1.08)}
+.bn{padding:8px 14px;font-size:12px;width:auto}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none!important;filter:none!important;box-shadow:none!important}
+
+/* ── TABLE ────────────────────────────── */
+.tw{overflow:auto;max-height:420px}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--ink3);color:var(--sub);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:10px 11px;text-align:left;position:sticky;top:0;z-index:2;border-bottom:1px solid var(--edge)}
+tbody td{padding:10px 11px;border-bottom:1px solid var(--edge);font-size:12.5px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(52,209,192,.03)}
+
+/* ── TAGS ─────────────────────────────── */
+.tg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.tok{background:var(--green-soft);color:var(--green)}.twa{background:var(--gold-soft);color:var(--gold)}
+.tba{background:var(--red-soft);color:var(--red)}.tbl{background:var(--blue-soft);color:var(--blue)}
+.tcn{background:var(--cyan-soft);color:var(--cyan)}.tdm{background:var(--ink3);color:var(--sub)}
+
+/* ── MAP ──────────────────────────────── */
+.mw{height:360px;border-radius:var(--rL);overflow:hidden;border:1px solid var(--edge);position:relative;background:var(--ink3)}
+#orderMap{height:100%;width:100%}
+.mbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.mbadge{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:99px;font-weight:500}
+.mc-src{font-size:11px;color:var(--dim);margin-top:5px;font-style:italic;font-family:var(--mono)}
+
+/* ── RESULT PANEL ─────────────────────── */
+.rp{background:var(--ink3);border:1px solid var(--gold);border-radius:var(--rL);padding:20px;animation:fu .3s ease}
+.rp .pnt{color:var(--gold)}
+
+/* ── COST ROWS ────────────────────────── */
+.cr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--edge);font-size:12.5px}
+.cr:last-child{border-bottom:none;font-family:var(--mono);font-size:14px;font-weight:500;color:var(--gold)}
+.cr .cl{color:var(--sub)}
+.cr-total{margin-top:6px;padding:10px 14px;background:var(--gold-soft);border-radius:var(--r)}
+
+/* ── ASSIGN ROWS ──────────────────────── */
+.ar{display:grid;grid-template-columns:1.4fr 1.4fr .9fr;gap:10px;padding:13px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);margin-bottom:9px;align-items:end}
+
+/* ── STAT CARDS ───────────────────────── */
+.sr{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.sc{background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:13px}
+.sc .l{font-size:10px;color:var(--sub);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.sc .v{font-family:var(--mono);font-size:22px;font-weight:500;margin-top:6px}
+
+/* ── FALLBACK NOTICE ──────────────────── */
+.fn{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.28);border-radius:var(--r);padding:9px 13px;font-size:11.5px;color:#fba0a0;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
+
+/* ── GEOCODE STATUS ───────────────────── */
+.gs-bar{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:var(--r);background:var(--ink3);border:1px solid var(--edge);margin-bottom:12px;font-size:12.5px}
+.gs-bar.loading{border-color:var(--gold);background:var(--gold-soft)}
+.gs-bar.ok{border-color:var(--green);background:var(--green-soft)}
+.gs-bar.err{border-color:var(--red);background:var(--red-soft)}
+
+/* ── TOAST ────────────────────────────── */
+#toast{position:fixed;bottom:22px;right:22px;padding:12px 18px;border-radius:var(--r);font-size:13.5px;font-weight:500;color:var(--text);display:none;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:370px;animation:tin .22s ease}
+@keyframes tin{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.tok2{background:var(--ink3);border:1px solid var(--green)}
+.ter{background:var(--ink3);border:1px solid var(--red)}
+
+/* ── SPINNER ──────────────────────────── */
+.sp{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,166,35,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── SCROLLBAR ────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--edge2);border-radius:3px}
+hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
+
+/* ── LEAFLET DARK ─────────────────────── */
+.leaflet-tile-pane{filter:brightness(.82) contrast(1.1) saturate(.85) hue-rotate(5deg)}
+.leaflet-container{background:var(--ink3)!important}
+.leaflet-popup-content-wrapper{background:var(--ink2)!important;color:var(--text)!important;border:1px solid var(--edge)!important;border-radius:var(--r)!important;box-shadow:0 8px 30px rgba(0,0,0,.4)!important}
+.leaflet-popup-tip{background:var(--ink2)!important}
+.leaflet-control-zoom a{background:var(--ink2)!important;color:var(--text)!important;border:1px solid var(--edge)!important}
+.leaflet-control-zoom a:hover{background:var(--ink3)!important;color:var(--gold)!important}
+.leaflet-control-attribution{background:rgba(10,14,26,.8)!important;color:var(--dim)!important;font-size:10px!important}
+
+/* ── RESPONSIVE ───────────────────────── */
+@media(max-width:1100px){.kg{grid-template-columns:repeat(4,1fr)}.g2,.g3{grid-template-columns:1fr}.g2e{grid-template-columns:1fr 1fr}}
+@media(max-width:820px){.hbg{display:block}.sb{position:fixed;top:var(--hh);left:0;bottom:0;transform:translateX(-100%);box-shadow:5px 0 30px rgba(0,0,0,.6)}.sb.on{transform:translateX(0)}.kg{grid-template-columns:repeat(3,1fr)}.g2e,.fg2{grid-template-columns:1fr}}
+@media(max-width:500px){.kg{grid-template-columns:repeat(2,1fr)}}
+</style>
 </head>
 <body>
 
-<div class="top-header">
-  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
-  <div>
-    <h1>ARMCL-01 Delivery Tracking Dashboard</h1>
-    <p>Live KPI dashboard, Cyclic Delivery Planning, independent truck assignment, and operations tracking.</p>
-  </div>
-</div>
-
-<div class="app-container">
-  <div class="sidebar" id="sidebar">
-    <div class="tabs">
-      <button class="tabBtn active" onclick="showTab('dashboard', this)">1. Live Dashboard</button>
-      <button class="tabBtn" onclick="showTab('orderCreate', this)">2. Order Creation</button>
-      <button class="tabBtn" onclick="showTab('dispatchCycles', this)">3. Dispatch Cycles & Assignment</button>
-      <button class="tabBtn" onclick="showTab('instant', this)">4. Operations Console</button>
-      <button class="tabBtn" onclick="showTab('settings', this)">5. Cost Model Settings</button>
+<!-- HEADER -->
+<header class="hdr">
+  <button class="hbg" onclick="toggleSb()">&#9776;</button>
+  <div class="hdr-logo">
+    <div class="hdr-mark">&#128667;</div>
+    <div>
+      <div class="hdr-title">ARMCL&#8209;01 LOGISTICS COMMAND</div>
+      <div class="hdr-sub">DELIVERY TRACKING &nbsp;&#183;&nbsp; CYCLIC DISPATCH &nbsp;&#183;&nbsp; ROUTE INTELLIGENCE</div>
     </div>
   </div>
+  <div class="hdr-r"><div class="pulse-dot">LIVE</div></div>
+</header>
 
-  <div class="main-content">
+<!-- BODY -->
+<div class="body">
+
+  <!-- SIDEBAR -->
+  <nav class="sb" id="sb">
+    <div class="sb-sec">
+      <div class="sb-lbl">Operations</div>
+      <button class="nb on" onclick="showTab('dash',this)"><span class="ni">&#128202;</span>Live Dashboard</button>
+      <button class="nb" onclick="showTab('order',this)"><span class="ni">&#128203;</span>Order Creation</button>
+      <button class="nb" onclick="showTab('dispatch',this)"><span class="ni">&#128260;</span>Dispatch Cycles</button>
+      <button class="nb" onclick="showTab('ops',this)"><span class="ni">&#9889;</span>Operations Console</button>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">System</div>
+      <button class="nb" onclick="showTab('cfg',this)"><span class="ni">&#9881;</span>Cost Model</button>
+    </div>
+    <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.0<br>Dhour Plant, Dhaka, Bangladesh</p></div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main" id="mainEl">
     <div class="wrap">
-      
-      <div id="dashboard" class="section active">
-        <div class="grid6" id="kpiRow"></div>
-        <div class="cols2">
-          <div class="panel">
-            <h2>Live Charts (Trips & Efficiencies)</h2>
-            <div class="cols3">
-              <div class="chartBox"><canvas id="statusPie"></canvas></div>
-              <div class="chartBox"><canvas id="trendLine"></canvas></div>
-              <div class="chartBox"><canvas id="clientBar"></canvas></div>
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <div id="dash" class="sec on">
+        <div class="ph">
+          <div><div class="pt">Live Dashboard</div><div class="ps">Real&#8209;time fleet &amp; delivery intelligence</div></div>
+          <button class="rbtn" onclick="boot()">&#8635; Refresh</button>
+        </div>
+        <div class="kg" id="kpiRow"></div>
+        <div class="g2">
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Trip &amp; Efficiency Analytics</div></div>
+            <div class="g3">
+              <div class="cb"><canvas id="cPie"></canvas></div>
+              <div class="cb"><canvas id="cTrend"></canvas></div>
+              <div class="cb"><canvas id="cClient"></canvas></div>
             </div>
           </div>
-          <div class="panel">
-            <h2>Fleet Utilization</h2>
-            <div class="miniGrid" id="fleetMini"></div>
-            <div class="cols2b" style="margin-top:15px">
-                <div class="chartBox"><canvas id="utilLine"></canvas></div>
-                <div class="chartBox"><canvas id="truckBar"></canvas></div>
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Fleet Utilization</div><span class="pbg" id="fBadge">&#8212;</span></div>
+            <div class="fg" id="fleetMini"></div>
+            <div class="g2e" style="margin-top:13px">
+              <div class="cb"><canvas id="cUtil"></canvas></div>
+              <div class="cb"><canvas id="cTruck"></canvas></div>
             </div>
           </div>
         </div>
-        <div class="panel">
-          <h2>Live Trip Activity — from Centralized Data</h2>
-          <div class="split">
-            <div class="bottomTable"><h3>In Transit / Scheduled</h3><div id="tableInTransit"></div></div>
-            <div class="bottomTable"><h3>Waiting / Unloading / Returned</h3><div id="tableWait"></div></div>
+        <div class="pn">
+          <div class="pnh"><div class="pnt">Live Trip Activity</div></div>
+          <div class="g2e">
+            <div><div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px">In Transit / Scheduled</div><div class="tw" id="tblIT"></div></div>
+            <div><div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px">Waiting / Unloading / Returned</div><div class="tw" id="tblW"></div></div>
           </div>
         </div>
       </div>
 
-      <div id="orderCreate" class="section">
-        <div class="cols2">
-            <div class="panel">
-              <h2>Create New Master Order</h2>
-              <div class="formgrid">
-                <div><label>Client</label><select id="ocClient"><option value="">Loading...</option></select></div>
-                <div style="grid-column: span 2;"><label>Address</label><input id="ocAddress" type="text" placeholder="Auto-fills from Client..."></div>
-                <div><label>SKU</label><select id="ocSku"><option value="">Loading...</option></select></div>
-                <div><label>Total Quantity (CFT)</label><input id="ocQty" type="number" min="1" step="0.01"></div>
-                <div><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
-                <div><label>Target Date</label><input id="ocDate" type="date"></div>
-                <div><label>Target Time</label><input id="ocTime" type="time"></div>
-                <div><label>Distance Override (km)</label><input id="ocOverride" type="number" placeholder="Optional"></div>
-                <div style="grid-column: span 3;"><label>Notes</label><input id="ocNotes" type="text"></div>
+      <!-- ═══ ORDER CREATION ═══ -->
+      <div id="order" class="sec">
+        <div class="ph">
+          <div><div class="pt">Create Master Order</div><div class="ps">Auto&#8209;geocodes from sheet address &rarr; shows map &rarr; routes via OSRM</div></div>
+        </div>
+        <div class="g2">
+          <!-- FORM -->
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Order Details</div></div>
+            <!-- geocode status bar -->
+            <div id="geoBar" class="gs-bar" style="display:none">
+              <span id="geoIcon"></span><span id="geoMsg"></span>
+            </div>
+            <div class="fg2">
+              <div class="fi"><label>Client</label><select id="ocClient"><option value="">Select client...</option></select></div>
+              <div class="fi s2"><label>Delivery Address <span style="color:var(--dim);font-weight:400;text-transform:none">(from DDL sheet &mdash; editable)</span></label><input id="ocAddr" type="text" placeholder="Auto&#8209;fills on client select"></div>
+              <div class="fi"><label>SKU / Grade</label><select id="ocSku"><option value="">Select SKU...</option></select></div>
+              <div class="fi"><label>Total Quantity (CFT)</label><input id="ocQty" type="number" min="1" step="0.01" placeholder="e.g. 2470"></div>
+              <div class="fi"><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
+              <div class="fi"><label>Target Date</label><input id="ocDate" type="date"></div>
+              <div class="fi"><label>Target Time</label><input id="ocTime" type="time"></div>
+              <div class="fi"><label>Distance Override (km) &mdash; optional</label><input id="ocOvr" type="number" placeholder="Leave blank for auto"></div>
+              <div class="fi s3"><label>Notes</label><input id="ocNotes" type="text" placeholder="Special instructions..."></div>
+            </div>
+            <div style="margin-top:16px">
+              <button class="btn bp" id="calcBtn" onclick="calculateRequirements()">&#128506; Step 1: Geocode &amp; Calculate Route</button>
+            </div>
+          </div>
+
+          <!-- RESULT -->
+          <div id="resultSec" style="display:none">
+            <div class="rp">
+              <div class="pnh" style="margin-bottom:13px;padding-bottom:11px;border-bottom:1px solid var(--edge)">
+                <div class="pnt">Route Analysis</div>
+                <span id="srcBadge" class="mbadge"></span>
               </div>
-              <button onclick="calculateRequirements()" style="margin-top:16px; width:100%;">Step 1: Calculate Route & Estimated Needs</button>
-            </div>
-
-            <div class="panel" id="ocResultSection" style="display:none; border:2px solid var(--brand2);">
-              <h2>Route & Requirement Analysis</h2>
-              <div class="mapWrap"><div id="map"></div></div>
-              <div style="display:flex; gap:15px; margin-top:10px;">
-                  <div class="tag ok" id="routeDist">Distance: -</div>
-                  <div class="tag ok" id="routeEta">ETA: -</div>
-                  <div class="tag warn" style="font-weight:bold; font-size:14px;" id="trucksReq">Est. Trucks Needed: -</div>
+              <div class="mw"><div id="orderMap"></div></div>
+              <div id="fallbackNote" class="fn" style="display:none">
+                <span>&#9888;</span>
+                <span>Route line is a straight&#8209;line estimate &mdash; OSRM server unavailable. Enter Distance Override for accurate cost.</span>
               </div>
-              <div id="planCost" class="small muted" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;"></div>
-              <button onclick="saveMasterOrder()" style="margin-top:16px; width:100%;" class="ok">Step 2: Save Master Order</button>
+              <div class="mbar">
+                <span class="mbadge tcn" id="rDist">&#8212;</span>
+                <span class="mbadge tok" id="rETA">&#8212;</span>
+                <span class="mbadge twa" id="rTrucks" style="font-size:12px;font-weight:700">&#8212;</span>
+              </div>
+              <div class="mc-src" id="rSrc"></div>
+              <div style="margin-top:14px">
+                <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px">Cost Breakdown</div>
+                <div id="costRows"></div>
+              </div>
+              <button class="btn bg" onclick="saveMasterOrder()" style="margin-top:14px">&#10003; Step 2: Save Master Order</button>
             </div>
-        </div>
-      </div>
-
-      <div id="dispatchCycles" class="section">
-        <div class="cols2">
-          <div class="panel">
-            <h2>1. Select Active Order</h2>
-            <select id="dcOrder" style="background:#f9fbfe; border-color:#d7e2ee; margin-bottom:15px;"><option value="">Loading Active Orders...</option></select>
-            
-            <div id="dcStats" style="display:none;">
-                <div class="miniGrid" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:15px;">
-                    <div class="mini"><div class="label">Total Ordered</div><div class="value" id="dcTotal">0</div></div>
-                    <div class="mini"><div class="label">Delivered/Dispatched</div><div class="value" style="color:var(--ok)" id="dcDisp">0</div></div>
-                    <div class="mini"><div class="label">Remaining Pending</div><div class="value" style="color:var(--bad)" id="dcRem">0</div></div>
-                </div>
-                
-                <div style="display:flex; gap:15px; align-items:flex-end; border-top:1px solid var(--line); padding-top:15px;">
-                    <div style="flex:1;">
-                        <label>How many trucks to dispatch in this cycle?</label>
-                        <input id="dcCount" type="number" min="1" value="1">
-                    </div>
-                    <button onclick="buildCycleRows()" class="secondary" style="width:auto; padding:12px 20px;">Load Assignment Rows</button>
-                </div>
-            </div>
-          </div>
-
-          <div class="panel" id="dcAssignmentPanel" style="display:none; border:2px solid var(--brand2);">
-            <h2>2. Assign Trucks & Drivers</h2>
-            <p class="small muted" style="margin-top:0;">Only resources currently available at the plant are shown.</p>
-            <div id="dcAssignmentContainer"></div>
-            <button onclick="submitDispatchCycle()" style="margin-top:16px; width:100%;" class="ok">Dispatch This Cycle to Centralized Data</button>
-          </div>
-        </div>
-        
-        <div class="panel">
-            <h2>Active Master Orders (Pending Completion)</h2>
-            <div class="bottomTable" id="dispatchTable"></div>
-        </div>
-      </div>
-
-      <div id="instant" class="section">
-        <div class="cols2">
-          <div class="panel" style="border:2px solid var(--brand2)">
-            <h2>Instant Input (Operations Console)</h2>
-            <p class="small muted" style="margin-top:0; margin-bottom:15px;">Update the live status of dispatched cyclic trips.</p>
-            <div style="margin-bottom:14px;">
-                <label>1. Select Active Trip</label>
-                <select id="iiTrip" style="background:#f9fbfe; border-color:#d7e2ee;"><option value="">Loading active trips...</option></select>
-            </div>
-            <div style="margin-bottom:14px;">
-                <label>2. Select Event / Status Update</label>
-                <select id="iiEvent">
-                    <option value="factory_out">Later Factory Out (Leaves Plant)</option>
-                    <option value="arrival">Client Arrival (Reaches Site)</option>
-                    <option value="ul_start">Unloading Start</option>
-                    <option value="ul_end">Unloading End (Completed)</option>
-                    <option value="return">Factory Return (Available Again)</option>
-                </select>
-            </div>
-            <div class="formgrid" style="grid-template-columns:1fr 1fr; margin-bottom:16px;">
-                <div><label>Date</label><input id="iiDate" type="date"></div>
-                <div><label>Time</label><input id="iiTime" type="time"></div>
-            </div>
-            <div id="iiDistWrap" style="display:none; margin-bottom:16px;">
-                <label>Total Trip Distance Covered (km)</label>
-                <input id="iiDistance" type="number" placeholder="Required for Return">
-            </div>
-            <button onclick="submitInstantEvent()">Submit Update to Centralized Data</button>
-          </div>
-          
-          <div class="panel">
-            <h2>Trip Management Rules</h2>
-            <ul style="font-size:14px; color:var(--text); line-height:1.6;">
-                <li><b>Active Trips:</b> Once you hit "Dispatch Cycle", the trips immediately appear here.</li>
-                <li><b>Dropdown Filtering:</b> A truck/driver stays locked to this trip until you submit a <b>Factory Return</b>.</li>
-                <li><b>Live Boards:</b> Every submission here instantly updates the Dashboard, derived sheets (MTS, Truck Output), and Order Completion %.</li>
-            </ul>
           </div>
         </div>
       </div>
 
-      <div id="settings" class="section">
-        <div class="panel">
-          <h2>Cost Model & Plant Settings</h2>
-          <div class="formgrid2">
-            <div><label>Plant Name</label><input id="stPlantName" readonly></div>
-            <div><label>Plant Address</label><input id="stPlantAddress" readonly></div>
-            <div><label>Plant Latitude</label><input id="stPlantLat" readonly></div>
-            <div><label>Plant Longitude</label><input id="stPlantLon" readonly></div>
-            <div><label>Capacity (CFT)</label><input id="stCap" type="number"></div>
-            <div><label>Speed (km/h)</label><input id="stSpeed" type="number"></div>
-            <div><label>Fixed Trip (BDT)</label><input id="stFixed" type="number"></div>
-            <div><label>Cost per km (BDT)</label><input id="stKm" type="number"></div>
-            <div><label>Pump Charge</label><input id="stPump" type="number"></div>
-            <div><label>Idle Cost/Hr</label><input id="stIdle" type="number"></div>
-            <div><label>Load Charge</label><input id="stLoad" type="number"></div>
-            <div><label>Unload Charge</label><input id="stUnload" type="number"></div>
-            <div><label>Contingency %</label><input id="stCont" type="number"></div>
-            <div><label>Load Buffer Min</label><input id="stLoadBuf" type="number"></div>
-            <div><label>Unload Buffer Min</label><input id="stUnloadBuf" type="number"></div>
-            <div style="display:flex;align-items:end"><button type="button" onclick="saveSettings()">Save Settings</button></div>
+      <!-- ═══ DISPATCH ═══ -->
+      <div id="dispatch" class="sec">
+        <div class="ph"><div><div class="pt">Dispatch Cycles &amp; Assignment</div><div class="ps">Allocate available trucks and drivers to active orders</div></div></div>
+        <div class="g2">
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Select Active Order</div></div>
+            <div class="fi" style="margin-bottom:14px"><label>Active Order</label><select id="dcOrder"><option value="">Loading...</option></select></div>
+            <div id="dcStats" style="display:none">
+              <div class="sr" style="margin-bottom:14px">
+                <div class="sc"><div class="l">Total Ordered</div><div class="v" id="dcTot">0</div></div>
+                <div class="sc"><div class="l">Dispatched</div><div class="v" style="color:var(--green)" id="dcDis">0</div></div>
+                <div class="sc"><div class="l">Remaining</div><div class="v" style="color:var(--red)" id="dcRem">0</div></div>
+              </div>
+              <hr>
+              <div style="display:flex;gap:11px;align-items:flex-end;margin-top:13px">
+                <div class="fi" style="flex:1"><label>Trucks to dispatch this cycle</label><input id="dcCnt" type="number" min="1" value="1"></div>
+                <button class="btn bs bn" onclick="buildCycleRows()" style="padding:11px 16px;white-space:nowrap">Load Assignment Rows</button>
+              </div>
+            </div>
+          </div>
+          <div class="pn" id="dcPanel" style="display:none;border-color:var(--gold)">
+            <div class="pnh"><div class="pnt">Assign Trucks &amp; Drivers</div><span class="tg twa">Available only</span></div>
+            <div id="dcRows"></div>
+            <button class="btn bg" onclick="submitCycle()" style="margin-top:13px">&#128640; Dispatch This Cycle</button>
+          </div>
+        </div>
+        <div class="pn">
+          <div class="pnh"><div class="pnt">Active Master Orders</div></div>
+          <div class="tw" id="dispTbl"></div>
+        </div>
+      </div>
+
+      <!-- ═══ OPS CONSOLE ═══ -->
+      <div id="ops" class="sec">
+        <div class="ph"><div><div class="pt">Operations Console</div><div class="ps">Live status updates for active delivery trips</div></div></div>
+        <div class="g2">
+          <div class="pn" style="border-color:var(--gold)">
+            <div class="pnh"><div class="pnt">Instant Trip Update</div><span class="tg twa">Live Input</span></div>
+            <div class="fi" style="margin-bottom:13px"><label>1. Select Active Trip</label><select id="iiTrip"><option value="">Loading...</option></select></div>
+            <div class="fi" style="margin-bottom:13px"><label>2. Event / Status</label>
+              <select id="iiEv">
+                <option value="factory_out">&#127981; Factory Out &#8212; Leaves Plant</option>
+                <option value="arrival">&#128205; Client Arrival &#8212; Reaches Site</option>
+                <option value="ul_start">&#11015; Unloading Start</option>
+                <option value="ul_end">&#9989; Unloading Complete</option>
+                <option value="return">&#8617; Factory Return &#8212; Available Again</option>
+              </select>
+            </div>
+            <div class="fg2b" style="margin-bottom:13px">
+              <div class="fi"><label>Date</label><input id="iiDate" type="date"></div>
+              <div class="fi"><label>Time</label><input id="iiTime" type="time"></div>
+            </div>
+            <div id="iiDistWrap" style="display:none;margin-bottom:14px">
+              <div class="fi"><label>Total Distance Covered (km)</label><input id="iiDist" type="number" placeholder="Required for Factory Return"></div>
+            </div>
+            <button class="btn bp" onclick="submitOps()">Submit to Centralized Data</button>
+          </div>
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Workflow Guide</div></div>
+            <div style="display:flex;flex-direction:column;gap:13px;font-size:13px;line-height:1.65;color:var(--sub)">
+              <div><b style="color:var(--gold)">Active Trips</b><br>Appear immediately after a Dispatch Cycle is committed.</div>
+              <div><b style="color:var(--gold)">Truck Lock</b><br>A truck stays assigned to its trip until Factory Return is submitted.</div>
+              <div><b style="color:var(--gold)">Live Sync</b><br>Every submission instantly updates Dashboard KPIs, MTS, Truck Output, and SMV sheets.</div>
+              <div><b style="color:var(--gold)">Sequence</b><br>Factory Out &#8594; Arrival &#8594; Unload Start &#8594; Unload End &#8594; Factory Return</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ COST MODEL ═══ -->
+      <div id="cfg" class="sec">
+        <div class="ph"><div><div class="pt">Cost Model Settings</div><div class="ps">Configure plant parameters and BDT cost factors</div></div></div>
+        <div class="pn">
+          <div class="pnh"><div class="pnt">Plant &amp; Cost Configuration</div></div>
+          <div class="fg2b">
+            <div class="fi"><label>Plant Name</label><input id="stPN" readonly style="opacity:.55"></div>
+            <div class="fi"><label>Plant Address</label><input id="stPA" readonly style="opacity:.55"></div>
+            <div class="fi"><label>Plant Latitude</label><input id="stLat" readonly style="opacity:.55"></div>
+            <div class="fi"><label>Plant Longitude</label><input id="stLon" readonly style="opacity:.55"></div>
+            <div class="fi"><label>Truck Capacity (CFT)</label><input id="stCap" type="number"></div>
+            <div class="fi"><label>Average Speed (km/h)</label><input id="stSpd" type="number"></div>
+            <div class="fi"><label>Fixed Trip Cost / Truck (BDT)</label><input id="stFix" type="number"></div>
+            <div class="fi"><label>Cost per km / Truck (BDT)</label><input id="stKm" type="number"></div>
+            <div class="fi"><label>Pump Charge / Truck (BDT)</label><input id="stPmp" type="number"></div>
+            <div class="fi"><label>Idle Cost / Hr / Truck (BDT)</label><input id="stIdl" type="number"></div>
+            <div class="fi"><label>Loading Charge / Truck (BDT)</label><input id="stLd" type="number"></div>
+            <div class="fi"><label>Unloading Charge / Truck (BDT)</label><input id="stUl" type="number"></div>
+            <div class="fi"><label>Contingency %</label><input id="stCon" type="number"></div>
+            <div class="fi"><label>Loading Buffer (min)</label><input id="stLBuf" type="number"></div>
+            <div class="fi"><label>Unloading Buffer (min)</label><input id="stUBuf" type="number"></div>
+            <div class="fi" style="align-self:end"><button class="btn bp" onclick="saveCfg()">Save Settings</button></div>
           </div>
         </div>
       </div>
 
     </div>
-  </div>
+  </main>
 </div>
-
-<div id="statusMsg"></div>
+<div id="toast"></div>
 
 <script>
-// =====================================================================
-// API CONFIGURATION
-// =====================================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwsM1uTrCjBU55Wn07FxEbbgo0dyHpOdRGWvAIXzSmGfWv1WIlVMwymTbzw1PhnllORlg/exec";
+// ─────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────
+const API = "https://script.google.com/macros/s/AKfycbw4uChxnmKSterKOAl73edqddznuzgNVdp2rsJcsSiu1wfIfRNB7Qn-PO3SuLc5uLuung/exec";
+const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
+const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
-let APP = {};
-let MAP = null;
-let ROUTE_LAYER = null;
-let CURRENT_CALC = {};
-let CHARTS = { statusPie: null, trendLine: null, clientBar: null, utilLine: null, truckBar: null };
+let APP = {}, OMAP = null, RLAYER = null, DMKR = null, CALC = {}, CH = {};
 
-function qs(id){ return document.getElementById(id); }
+// ─────────────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────────────
+const qs  = id => document.getElementById(id);
+const esc = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const num = v  => { const n=Number(v); return isNaN(n)?0:n; };
+const bdtF= v  => num(v).toLocaleString('en-GB',{maximumFractionDigits:2});
 
-function toggleSidebar() {
-  qs('sidebar').classList.toggle('open');
+function toast(msg, err=false) {
+  const el=qs('toast'); el.textContent=msg;
+  el.className=err?'ter':'tok2'; el.style.display='block';
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none', err?6500:3200);
 }
 
-function toast(msg, isError = false) {
-    const el = qs('statusMsg');
-    el.textContent = msg;
-    el.style.backgroundColor = isError ? '#d64545' : '#1a9b58';
-    el.style.display = 'block';
-    setTimeout(() => { el.style.display = 'none'; }, 4000);
+function stTag(s) {
+  s=String(s||'');
+  if(s==='Completed'||s==='Returned & Available') return `<span class="tg tok">${esc(s)}</span>`;
+  if(['In Transit','Waiting For Unload','Unloading','Scheduled'].includes(s)) return `<span class="tg twa">${esc(s)}</span>`;
+  if(s==='Breakdown') return `<span class="tg tba">${esc(s)}</span>`;
+  if(s==='In Progress') return `<span class="tg tbl">${esc(s)}</span>`;
+  return `<span class="tg tdm">${esc(s)}</span>`;
 }
 
-function gs(fnName, payloadArgs) {
-  return new Promise((resolve, reject) => {
-    toast("Communicating with server...");
-    const timeoutId = setTimeout(() => { reject(new Error("Google took too long to respond.")); }, 40000);
-    fetch(API_URL, {
-      method: 'POST', headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ fn: fnName, args: payloadArgs })
-    })
-    .then(r => { clearTimeout(timeoutId); return r.json(); })
-    .then(json => {
-      if (json.status === 'success') { toast("Success!"); resolve(json.data); }
-      else { toast(json.message, true); reject(new Error(json.message)); }
-    })
-    .catch(err => { clearTimeout(timeoutId); toast("Network error.", true); reject(err); });
+// ─────────────────────────────────────────────────────────────
+// API TO GAS
+// ─────────────────────────────────────────────────────────────
+function gs(fn, args) {
+  return new Promise((ok,err) => {
+    const tid=setTimeout(()=>err(new Error('Timed out (40s). Google may be slow.')), 40000);
+    fetch(API, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({fn,args})})
+      .then(r=>{ clearTimeout(tid); return r.json(); })
+      .then(j=>{ if(j.status==='success') ok(j.data); else err(new Error(j.message||'Server error')); })
+      .catch(e=>{ clearTimeout(tid); err(e); });
   });
 }
 
-function showTab(tabId, btn){
-  document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
-  
-  qs(tabId).style.display = 'block';
-  qs(tabId).classList.add('active');
-  btn.classList.add('active');
-  
-  if (tabId === 'orderCreate' && MAP) setTimeout(() => MAP.invalidateSize(), 200);
-  
-  // Close sidebar on mobile after clicking
-  if (window.innerWidth <= 900) {
-      qs('sidebar').classList.remove('open');
+// ─────────────────────────────────────────────────────────────
+// BROWSER-SIDE GEOCODING via Nominatim
+// Called from browser (works fine) — GAS never geocodes
+// ─────────────────────────────────────────────────────────────
+function geoBar(state, msg) {
+  const bar=qs('geoBar'), icon=qs('geoIcon'), txt=qs('geoMsg');
+  bar.style.display='flex'; bar.className='gs-bar '+state;
+  const icons={loading:'<span class="sp"></span>', ok:'&#9989;', err:'&#9888;'};
+  icon.innerHTML=icons[state]||''; txt.textContent=msg;
+}
+function hideGeoBar() { qs('geoBar').style.display='none'; }
+
+async function geocodeBrowser(address) {
+  // Try with full address first, then simpler fallback
+  const queries = [address, address.replace(/[-\d]+/g,'').trim()];
+  for (const q of queries) {
+    if (!q.trim()) continue;
+    try {
+      const r = await fetch(NOMINATIM + encodeURIComponent(q + ', Bangladesh'), {
+        headers: {'Accept-Language':'en', 'User-Agent':'ARMCL-Dashboard/3.0'}
+      });
+      const data = await r.json();
+      if (data && data.length) {
+        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), display: data[0].display_name };
+      }
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 400));
   }
-  
-  document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+  return null;
 }
 
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
-function money(v){ return num(v).toLocaleString('en-GB', {maximumFractionDigits: 2}); }
-
-function initDates(){
-  const today = new Date(); const t = today.toTimeString().slice(0,5);
-  ['ocDate','iiDate'].forEach(id => { if(qs(id)) qs(id).valueAsDate = today; });
-  ['ocTime','iiTime'].forEach(id => { if(qs(id)) qs(id).value = t; });
+// ─────────────────────────────────────────────────────────────
+// MAP
+// ─────────────────────────────────────────────────────────────
+function ensureMap() {
+  if (OMAP) { OMAP.invalidateSize(); return; }
+  OMAP = L.map('orderMap',{zoomControl:true}).setView([PLANT_LAT,PLANT_LON], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'&copy; OpenStreetMap', maxZoom:19}).addTo(OMAP);
+  // Plant marker — amber pulsing ring
+  const pIcon = L.divIcon({className:'', iconSize:[18,18], iconAnchor:[9,9],
+    html:`<div style="width:18px;height:18px;border-radius:50%;background:var(--gold);border:3px solid #fff;box-shadow:0 0 0 4px var(--gold-glow),0 2px 12px rgba(245,166,35,.5)"></div>`});
+  L.marker([PLANT_LAT,PLANT_LON],{icon:pIcon}).addTo(OMAP)
+   .bindPopup('<b style="color:#f5a623">&#127981; ARMCL Dhour Plant</b><br><span style="font-size:11px;color:#7e93b5">Dispatch Origin</span>');
 }
 
-function ensureMap(){
-  if (MAP || !qs('map')) return;
-  MAP = L.map('map').setView([23.886798, 90.359463], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(MAP);
-  L.marker([23.886798, 90.359463]).addTo(MAP).bindPopup('ARMCL Plant');
+function showAreaOnMap(lat, lon, address) {
+  // Show the destination area before routing completes
+  ensureMap();
+  if (DMKR) { OMAP.removeLayer(DMKR); DMKR=null; }
+  const dIcon = L.divIcon({className:'', iconSize:[18,18], iconAnchor:[9,9],
+    html:`<div style="width:18px;height:18px;border-radius:50%;background:var(--green);border:3px solid #fff;box-shadow:0 0 0 4px var(--green-soft),0 2px 12px rgba(45,212,160,.4)"></div>`});
+  DMKR = L.marker([lat,lon],{icon:dIcon}).addTo(OMAP)
+    .bindPopup(`<b style="color:#2dd4a0">&#128205; Delivery Site</b><br><span style="font-size:10.5px;color:#7e93b5">${esc(address)}</span>`);
+  // Fit to show both plant + destination
+  const bounds = L.latLngBounds([[PLANT_LAT,PLANT_LON],[lat,lon]]);
+  OMAP.fitBounds(bounds, {padding:[55,55], maxZoom:14});
+  setTimeout(()=>{ if(OMAP) OMAP.invalidateSize(); }, 150);
 }
 
-function statusClass(s){
-  s = String(s || '');
-  if (s === 'Completed' || s === 'Returned & Available') return 'ok';
-  if (s === 'In Transit' || s === 'Waiting For Unload' || s === 'Unloading' || s === 'Scheduled') return 'warn';
-  if (s === 'Breakdown') return 'bad'; return '';
+function drawRoute(res) {
+  if (RLAYER) { OMAP.removeLayer(RLAYER); RLAYER=null; }
+  if (res.coords && res.coords.length > 1) {
+    RLAYER = L.polyline(res.coords, {
+      color: res.fallback ? '#f06060' : '#34d1c0',
+      weight: 4.5, opacity: .88,
+      dashArray: res.fallback ? '9,7' : null
+    }).addTo(OMAP);
+    // Refine fit to actual route
+    OMAP.fitBounds(RLAYER.getBounds(), {padding:[50,50], maxZoom:14});
+  }
 }
 
-// =====================================================================
-// UI RENDERERS
-// =====================================================================
+// ─────────────────────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────────────────────
+function toggleSb() { qs('sb').classList.toggle('on'); }
+
+function showTab(id, btn) {
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  qs(id).classList.add('on');
+  if (btn) btn.classList.add('on');
+  if (window.innerWidth<=820) qs('sb').classList.remove('on');
+  if (id==='order' && OMAP) setTimeout(()=>OMAP.invalidateSize(), 200);
+  qs('mainEl').scrollTo({top:0, behavior:'smooth'});
+}
+
+function initDates() {
+  const today=new Date(), t=today.toTimeString().slice(0,5);
+  ['ocDate','iiDate'].forEach(id=>{ if(qs(id)) qs(id).valueAsDate=today; });
+  ['ocTime','iiTime'].forEach(id=>{ if(qs(id)) qs(id).value=t; });
+}
+
+// ─────────────────────────────────────────────────────────────
+// DROPDOWNS & RENDERERS
+// ─────────────────────────────────────────────────────────────
 function buildDropdowns() {
-    if(qs('ocClient')) qs('ocClient').innerHTML = '<option value="">Select client...</option>' + (APP.clients||[]).map(c => `<option>${esc(c)}</option>`).join('');
-    if(qs('ocSku')) qs('ocSku').innerHTML = '<option value="">Select SKU...</option>' + (APP.skus||[]).map(s => `<option>${esc(s)}</option>`).join('');
-    
-    if(qs('dcOrder')) {
-        const orders = APP.activeOrders || [];
-        qs('dcOrder').innerHTML = '<option value="">Select active order...</option>' + 
-            orders.map(o => `<option value="${o.orderId}">[${o.orderId}] ${esc(o.client)} — Rem: ${money(o.remainingQty)} CFT</option>`).join('');
-    }
-
-    if(qs('dispatchTable')) {
-        const oRows = APP.activeOrders || [];
-        qs('dispatchTable').innerHTML = oRows.length ? `<table><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips Left</th><th>Status</th></tr>` + 
-            oRows.map(r => `<tr><td>${r.orderId}</td><td>${r.client}</td><td>${money(r.totalQty)}</td><td>${money(r.dispatchedQty)}</td><td style="color:var(--bad); font-weight:bold;">${money(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td><span class="tag ${statusClass(r.status)}">${r.status}</span></td></tr>`).join('') + `</table>` 
-            : '<p class="small muted">No active orders found.</p>';
-    }
-
-    if(qs('iiTrip')) {
-        const trips = APP.activeTrips || [];
-        qs('iiTrip').innerHTML = '<option value="">Select an active trip...</option>' + 
-            trips.map(t => `<option value="${t.rowNo}">Row ${t.rowNo} | [${t.orderId}] | Trk: ${t.truck} | Drv: ${t.driver} | Stat: ${t.status}</option>`).join('');
-    }
+  const s = v => `<option value="${esc(v)}">${esc(v)}</option>`;
+  if(qs('ocClient')) qs('ocClient').innerHTML='<option value="">Select client...</option>'+(APP.clients||[]).map(s).join('');
+  if(qs('ocSku'))    qs('ocSku').innerHTML   ='<option value="">Select SKU...</option>'  +(APP.skus||[]).map(s).join('');
+  if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
+  if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
 }
 
 function renderDashboard() {
-  const d = APP.dashboard || {};
-  if(qs('kpiRow')){
-      const cards = [['Fleet Utilization %', (d.utilPct||0)+'%'], ['Active Trucks', d.activeTrucks||0], ['Trucks Used Today', Math.round(((d.utilPct||0)/100)*(d.activeTrucks||0))], ['Total Trips Today', d.completedToday||0], ['In Transit', d.inTransit||0], ['Waiting / Unloading', (d.waiting||0) + (d.unloading||0)], ['Avg Transit', d.avgTransit||0], ['Avg Wait', d.avgWait||0], ['Avg Unload', d.avgUnload||0], ['Avg Cycle', d.avgCycle||0], ['Total CFT', money(d.totalCft||0)], ['SMV Efficiency', (d.smvEfficiency||0)+'%']];
-      qs('kpiRow').innerHTML = cards.map(([a,b]) => `<div class="card kpi"><div class="label">${esc(a)}</div><div class="value">${esc(String(b))}</div></div>`).join('');
-  }
-  
+  const d=APP.dashboard||{};
+  const kpis=[
+    {l:'Fleet Util %',    v:(d.utilPct||0)+'%',             c:'wa'},
+    {l:'Active Fleet',    v:d.activeTrucks||0,               c:''},
+    {l:'In Transit',      v:d.inTransit||0,                  c:'wa'},
+    {l:'Waiting/Unload',  v:(d.waiting||0)+(d.unloading||0), c:'wa'},
+    {l:'Completed Today', v:d.completedToday||0,             c:'ok'},
+    {l:'Breakdown',       v:d.breakdown||0,                  c:d.breakdown>0?'ba':''},
+    {l:'Avg Transit',     v:(d.avgTransit||0)+' min',        c:''},
+    {l:'Avg Wait',        v:(d.avgWait||0)+' min',           c:''},
+    {l:'Avg Unload',      v:(d.avgUnload||0)+' min',         c:''},
+    {l:'Avg Cycle',       v:(d.avgCycle||0)+' min',          c:d.avgCycle>120?'wa':'ok'},
+    {l:'Total CFT',       v:bdtF(d.totalCft||0),             c:''},
+    {l:'SMV Efficiency',  v:(d.smvEfficiency||0)+'%',        c:d.smvEfficiency>=90?'ok':d.smvEfficiency>=70?'wa':'ba'},
+  ];
+  if(qs('kpiRow')) qs('kpiRow').innerHTML=kpis.map((k,i)=>`<div class="kc ${k.c}" style="animation-delay:${i*.04}s"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+
   if(qs('fleetMini')){
-      const trucks = APP.trucks || []; const available = APP.availableTrucksFull || [];
-      const total = trucks.length; const avail = available.filter(t => t && t.available).length; const active = trucks.filter(t => t && t.status === 'Active').length; const busy = Math.max(0, active - avail);
-      qs('fleetMini').innerHTML = `<div class="mini"><div class="label">Active Fleet</div><div class="value">${active}</div></div><div class="mini"><div class="label">Available Now</div><div class="value">${avail}</div></div><div class="mini"><div class="label">Busy Now</div><div class="value">${busy}</div></div><div class="mini"><div class="label">Total System Fleet</div><div class="value">${total}</div></div>`;
-  }
-  
-  const tables = APP.liveTables || {};
-  if(qs('tableInTransit')){
-      const rows = tables.inTransit || [];
-      qs('tableInTransit').innerHTML = rows.length ? `<table><thead><tr><th>Truck</th><th>Driver</th><th>Client</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.truck)}</td><td>${esc(r.driver)}</td><td>${esc(r.client)}</td><td>${r.qty}</td><td><span class="tag ${statusClass(r.status)}">${r.status}</span></td></tr>`).join('')}</tbody></table>` : '<p class="small muted">No rows found.</p>';
-  }
-  if(qs('tableWait')){
-      const rows = [].concat(tables.waiting || []).concat(tables.unloading || []).concat(tables.returned || []).concat(tables.delayed || []);
-      qs('tableWait').innerHTML = rows.length ? `<table><thead><tr><th>Truck</th><th>Driver</th><th>Client</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.truck)}</td><td>${esc(r.driver)}</td><td>${esc(r.client)}</td><td>${r.qty}</td><td><span class="tag ${statusClass(r.status)}">${r.status}</span></td></tr>`).join('')}</tbody></table>` : '<p class="small muted">No rows found.</p>';
+    const trucks=APP.trucks||[],avF=APP.availableTrucksFull||[];
+    const total=trucks.length,active=trucks.filter(t=>t.status==='Active').length,avail=avF.filter(t=>t.available).length;
+    qs('fleetMini').innerHTML=[['Total Fleet',total],['Active',active],['Available Now',avail],['Busy Now',Math.max(0,active-avail)]].map(([l,v])=>`<div class="fc"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+    if(qs('fBadge')) qs('fBadge').textContent=(d.utilPct||0)+'% utilized';
   }
 
-  // Render Charts
-  if(qs('statusPie')) {
-      const charts = APP.charts || {};
-      if (CHARTS.statusPie) CHARTS.statusPie.destroy(); if (CHARTS.trendLine) CHARTS.trendLine.destroy(); if (CHARTS.clientBar) CHARTS.clientBar.destroy(); if (CHARTS.utilLine) CHARTS.utilLine.destroy(); if (CHARTS.truckBar) CHARTS.truckBar.destroy();
-      CHARTS.statusPie = new Chart(qs('statusPie').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(charts.statusPie||{}), datasets: [{ data: Object.keys(charts.statusPie||{}).map(k => charts.statusPie[k]) }] }, options: { responsive: true, maintainAspectRatio: false } });
-      CHARTS.trendLine = new Chart(qs('trendLine').getContext('2d'), { type: 'line', data: { labels: charts.trendLine?.labels || [], datasets: [ { label: 'Avg Cycle (min)', data: charts.trendLine?.cycleVals || [] }, { label: 'Qty CFT', data: charts.trendLine?.qtyVals || [] } ] }, options: { responsive: true, maintainAspectRatio: false } });
-      CHARTS.clientBar = new Chart(qs('clientBar').getContext('2d'), { type: 'bar', data: { labels: charts.clientBar?.labels || [], datasets: [{ label: 'Qty Delivered', data: charts.clientBar?.qtyVals || [] }] }, options: { responsive: true, maintainAspectRatio: false } });
-      CHARTS.utilLine = new Chart(qs('utilLine').getContext('2d'), { type: 'line', data: { labels: charts.utilLine?.labels || [], datasets: [{ label: 'Daily Fleet Utilization %', data: charts.utilLine?.utilVals || [], borderColor:'#1a9b58', backgroundColor:'rgba(26, 155, 88, 0.2)' }] }, options: { responsive: true, maintainAspectRatio: false } });
-      CHARTS.truckBar = new Chart(qs('truckBar').getContext('2d'), { type: 'bar', data: { labels: charts.truckBar?.labels || [], datasets: [{ label: 'Trips per Truck', data: charts.truckBar?.trips || [], backgroundColor:'#16345f' }] }, options: { responsive: true, maintainAspectRatio: false } });
+  const tbls=APP.liveTables||{};
+  const mkTbl=rows=>{
+    if(!rows||!rows.length)return'<div style="font-size:12.5px;color:var(--dim);padding:10px 0">No records.</div>';
+    return`<table><thead><tr><th>Truck</th><th>Driver</th><th>Client</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.truck)}</b></td><td>${esc(r.driver)}</td><td>${esc(r.client)}</td><td>${bdtF(r.qty)}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`;
+  };
+  if(qs('tblIT')) qs('tblIT').innerHTML=mkTbl(tbls.inTransit||[]);
+  if(qs('tblW'))  qs('tblW').innerHTML =mkTbl([].concat(tbls.waiting||[],tbls.unloading||[],tbls.returned||[]));
+
+  if(qs('dispTbl')){
+    const oRows=APP.activeOrders||[];
+    qs('dispTbl').innerHTML=oRows.length
+      ?`<table><thead><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips</th><th>Status</th></tr></thead><tbody>${oRows.map(r=>`<tr><td><b style="color:var(--gold);font-family:var(--mono)">${r.orderId}</b></td><td>${esc(r.client)}</td><td>${bdtF(r.totalQty)} CFT</td><td style="color:var(--green)">${bdtF(r.dispatchedQty)}</td><td style="color:var(--red);font-weight:700">${bdtF(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`
+      :'<div style="font-size:12.5px;color:var(--dim);padding:10px 0">No active orders.</div>';
   }
+
+  // Charts
+  const ch=APP.charts||{};
+  const cOpt={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7e93b5',font:{size:10.5}}}}};
+  const ax=()=>({x:{ticks:{color:'#7e93b5',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#7e93b5',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}});
+  ['cPie','cTrend','cClient','cUtil','cTruck'].forEach(id=>{if(CH[id]){CH[id].destroy();CH[id]=null;}});
+  if(qs('cPie')&&ch.statusPie)CH.cPie=new Chart(qs('cPie'),{type:'doughnut',data:{labels:Object.keys(ch.statusPie),datasets:[{data:Object.values(ch.statusPie),backgroundColor:['#60a5fa','#f5a623','#34d1c0','#2dd4a0','#a78bfa','#f06060'],borderWidth:0,hoverOffset:5}]},options:{...cOpt,cutout:'68%'}});
+  if(qs('cTrend')&&ch.trendLine)CH.cTrend=new Chart(qs('cTrend'),{type:'line',data:{labels:ch.trendLine.labels||[],datasets:[{label:'Avg Cycle (min)',data:ch.trendLine.cycleVals||[],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.1)',tension:.4,fill:true,pointRadius:3},{label:'Qty CFT',data:ch.trendLine.qtyVals||[],borderColor:'#34d1c0',backgroundColor:'rgba(52,209,192,.1)',tension:.4,fill:true,pointRadius:3}]},options:{...cOpt,scales:ax()}});
+  if(qs('cClient')&&ch.clientBar)CH.cClient=new Chart(qs('cClient'),{type:'bar',data:{labels:ch.clientBar.labels||[],datasets:[{label:'Qty Delivered',data:ch.clientBar.qtyVals||[],backgroundColor:'rgba(52,209,192,.12)',borderColor:'#34d1c0',borderWidth:1,borderRadius:4}]},options:{...cOpt,scales:ax()}});
+  if(qs('cUtil')&&ch.utilLine)CH.cUtil=new Chart(qs('cUtil'),{type:'line',data:{labels:ch.utilLine.labels||[],datasets:[{label:'Fleet Util %',data:ch.utilLine.utilVals||[],borderColor:'#2dd4a0',backgroundColor:'rgba(45,212,160,.1)',tension:.4,fill:true,pointRadius:3}]},options:{...cOpt,scales:ax()}});
+  if(qs('cTruck')&&ch.truckBar)CH.cTruck=new Chart(qs('cTruck'),{type:'bar',data:{labels:ch.truckBar.labels||[],datasets:[{label:'Trips',data:ch.truckBar.trips||[],backgroundColor:'rgba(245,166,35,.12)',borderColor:'#f5a623',borderWidth:1,borderRadius:4}]},options:{...cOpt,scales:ax(),indexAxis:'y'}});
 
   // Settings
-  if(qs('stPlantName')) {
-      const p = APP.settings || {};
-      qs('stPlantName').value = p.plantName; qs('stPlantAddress').value = p.plantAddress; qs('stPlantLat').value = p.plantLat; qs('stPlantLon').value = p.plantLon;
-      qs('stCap').value = p.truckCapacity; qs('stSpeed').value = p.avgSpeedKmph; qs('stFixed').value = p.fixedTripBDT; qs('stKm').value = p.perKmBDT; qs('stPump').value = p.pumpChargeBDT; qs('stIdle').value = p.idleCostPerHourBDT; qs('stLoad').value = p.loadingChargeBDT; qs('stUnload').value = p.unloadingChargeBDT; qs('stCont').value = p.contingencyPct; qs('stLoadBuf').value = p.loadingBufferMin; qs('stUnloadBuf').value = p.unloadingBufferMin;
+  if(qs('stPN')){
+    const p=APP.settings||{};
+    qs('stPN').value=p.plantName||'';qs('stPA').value=p.plantAddress||'';
+    qs('stLat').value=p.plantLat||'';qs('stLon').value=p.plantLon||'';
+    qs('stCap').value=p.truckCapacity||'';qs('stSpd').value=p.avgSpeedKmph||'';
+    qs('stFix').value=p.fixedTripBDT||'';qs('stKm').value=p.perKmBDT||'';
+    qs('stPmp').value=p.pumpChargeBDT||'';qs('stIdl').value=p.idleCostPerHourBDT||'';
+    qs('stLd').value=p.loadingChargeBDT||'';qs('stUl').value=p.unloadingChargeBDT||'';
+    qs('stCon').value=p.contingencyPct||'';qs('stLBuf').value=p.loadingBufferMin||'';qs('stUBuf').value=p.unloadingBufferMin||'';
   }
 }
 
-// =====================================================================
-// ORDER CREATION LOGIC (Tab 2)
-// =====================================================================
-if(qs('ocClient')) qs('ocClient').addEventListener('change', async (e) => {
-    qs('ocAddress').value = await gs('getClientAddressForWeb', e.target.value);
+// ─────────────────────────────────────────────────────────────
+// ORDER CREATION — KEY FLOW:
+//  1) Client select → fill address from GAS
+//  2) Step 1 click → browser geocodes address via Nominatim
+//  3) Map immediately shows the area with destination pin
+//  4) GAS called with destLat/destLon → OSRM routing
+//  5) Route drawn on map, costs shown, Step 2 enabled
+// ─────────────────────────────────────────────────────────────
+if(qs('ocClient')) qs('ocClient').addEventListener('change', async e => {
+  if (!e.target.value) return;
+  try { qs('ocAddr').value = await gs('getClientAddressForWeb', e.target.value) || ''; }
+  catch(err) { /* silent */ }
 });
 
 async function calculateRequirements() {
-    const payload = {
-        client: qs('ocClient').value, address: qs('ocAddress').value,
-        qty: qs('ocQty').value, overrideKm: qs('ocOverride').value, pump: qs('ocPump').value
-    };
-    if(!payload.client || !payload.qty) return toast("Client and Qty required.", true);
-    
-    try {
-        const res = await gs('calculateOrderRequirements', payload);
-        CURRENT_CALC = res;
-        
-        qs('routeDist').textContent = `Distance: ${res.distanceKm} km`;
-        qs('routeEta').textContent = `ETA: ${res.etaMin} min`;
-        qs('trucksReq').textContent = `Est. Trucks Needed: ${res.trucksNeeded}`;
-        
-        if(res.costs) {
-            const c = res.costs;
-            qs('planCost').innerHTML = `<b>Estimated Cost Model</b> — Fixed: ${money(c.fixed)} | Road: ${money(c.road)} | Time: ${money(c.time)} | Total BDT: <b>${money(c.total)}</b> (${money(c.perCft)} / CFT)`;
-        }
-        
-        qs('ocResultSection').style.display = 'block';
-        ensureMap();
-        if(ROUTE_LAYER) MAP.removeLayer(ROUTE_LAYER);
-        if(res.coords && res.coords.length) {
-            ROUTE_LAYER = L.polyline(res.coords, {color:'blue', weight:5}).addTo(MAP);
-            MAP.fitBounds(ROUTE_LAYER.getBounds(), {padding:[20,20]});
-        }
-    } catch(err) { toast(err.message, true); }
+  const client = qs('ocClient').value, qty = qs('ocQty').value;
+  if (!client || !qty) return toast('Client and Quantity are required.', true);
+  const address = qs('ocAddr').value.trim();
+  if (!address)  return toast('Address is empty. Select a client or enter manually.', true);
+
+  const btn = qs('calcBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="sp"></span> Step 1 of 2: Geocoding address...';
+
+  // STEP 1 — Browser geocodes
+  geoBar('loading', 'Locating "' + address + '" on map...');
+  const geo = await geocodeBrowser(address);
+
+  if (!geo) {
+    const ovr = Number(qs('ocOvr').value) || 0;
+    if (ovr <= 0) {
+      hideGeoBar();
+      btn.disabled=false; btn.innerHTML='&#128506; Step 1: Geocode & Calculate Route';
+      return toast('Address not found on map. Please enter a Distance Override or refine the address.', true);
+    }
+    // Has override — proceed with Dhaka center coords as placeholder
+    geoBar('err', 'Address not found — using Distance Override with approximate map.');
+    await proceedWithCoords(23.8103, 90.4125, address, ovr, btn, true);
+    return;
+  }
+
+  geoBar('ok', `Found: ${geo.display || address} (${geo.lat.toFixed(4)}, ${geo.lon.toFixed(4)})`);
+
+  // STEP 2 — Show area on map immediately
+  qs('resultSec').style.display = 'block';
+  ensureMap();
+  showAreaOnMap(geo.lat, geo.lon, address);
+
+  btn.innerHTML = '<span class="sp"></span> Step 2 of 2: Calculating route via OSRM...';
+  await proceedWithCoords(geo.lat, geo.lon, address, Number(qs('ocOvr').value)||0, btn, false);
+}
+
+async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed) {
+  try {
+    const res = await gs('calculateOrderRequirements', {
+      qty: qs('ocQty').value,
+      overrideKm: ovr,
+      pump: qs('ocPump').value,
+      destLat, destLon
+    });
+    CALC = res;
+
+    // Map update
+    qs('resultSec').style.display='block';
+    ensureMap();
+    drawRoute(res);
+
+    // Badges & info
+    qs('rDist').textContent   = `${res.distanceKm} km`;
+    qs('rETA').textContent    = `ETA: ${res.etaMin} min`;
+    qs('rTrucks').textContent = `${res.trucksNeeded} truck(s)`;
+    qs('rSrc').textContent    = res.routeSource || '';
+
+    const sb = qs('srcBadge');
+    if (geoFailed)         { sb.textContent='&#9888; Geo failed'; sb.className='mbadge tba'; }
+    else if (res.fallback) { sb.textContent='~ Estimated'; sb.className='mbadge tba'; }
+    else                   { sb.textContent='&#10003; OSRM Route'; sb.className='mbadge tcn'; }
+
+    qs('fallbackNote').style.display = (res.fallback||geoFailed) ? 'flex' : 'none';
+
+    // Cost breakdown
+    const c = res.costs||{};
+    const rows = [['Fixed Trip','fixed'],['Road (distance)','road'],['Pump','pump'],['Loading','loading'],['Unloading','unloading'],['Time Cost','time'],['Contingency','contingency']];
+    qs('costRows').innerHTML = rows.map(([l,k])=>`<div class="cr"><span class="cl">${l}</span><span>BDT ${bdtF(c[k])}</span></div>`).join('')+
+      `<div class="cr cr-total"><span>TOTAL COST</span><span>BDT ${bdtF(c.total)} &nbsp;<small style="font-size:11px;opacity:.7">(${bdtF(c.perCft)}/CFT)</small></span></div>`;
+
+    toast('Route calculated successfully!');
+  } catch(err) {
+    toast(err.message || 'Routing failed.', true);
+    geoBar('err', 'Routing error: ' + err.message);
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML='&#128506; Step 1: Geocode & Calculate Route';
+  }
 }
 
 async function saveMasterOrder() {
-    const payload = {
-        client: qs('ocClient').value, address: qs('ocAddress').value,
-        sku: qs('ocSku').value, qty: qs('ocQty').value, pump: qs('ocPump').value,
-        date: qs('ocDate').value, time: qs('ocTime').value, notes: qs('ocNotes').value,
-        distanceKm: CURRENT_CALC.distanceKm, etaMin: CURRENT_CALC.etaMin
-    };
-    try {
-        const res = await gs('saveMasterOrder', payload);
-        APP = res.data;
-        buildDropdowns(); renderDashboard();
-        toast("Master Order Saved!");
-        qs('ocResultSection').style.display = 'none';
-        qs('ocQty').value = ''; qs('ocOverride').value = '';
-    } catch(err) { toast(err.message, true); }
+  if (!CALC.distanceKm) return toast('Run Step 1 first.', true);
+  if (!qs('ocSku').value) return toast('Please select a SKU.', true);
+  const payload = {
+    client:qs('ocClient').value, address:qs('ocAddr').value,
+    sku:qs('ocSku').value, qty:qs('ocQty').value, pump:qs('ocPump').value,
+    date:qs('ocDate').value, time:qs('ocTime').value, notes:qs('ocNotes').value,
+    distanceKm:CALC.distanceKm, etaMin:CALC.etaMin
+  };
+  try {
+    const res=await gs('saveMasterOrder',payload);
+    APP=res.data; buildDropdowns(); renderDashboard();
+    toast('&#10003; Master Order saved!');
+    qs('resultSec').style.display='none';
+    qs('ocQty').value=''; qs('ocOvr').value=''; CALC={}; hideGeoBar();
+  } catch(err){ toast(err.message,true); }
 }
 
-// =====================================================================
-// DISPATCH CYCLES & ASSIGNMENT (Tab 3)
-// =====================================================================
-if(qs('dcOrder')) qs('dcOrder').addEventListener('change', (e) => {
-    const orderId = e.target.value;
-    if(!orderId) { qs('dcStats').style.display = 'none'; qs('dcAssignmentPanel').style.display = 'none'; return; }
-    
-    const o = APP.activeOrders.find(x => x.orderId === orderId);
-    if(o) {
-        qs('dcTotal').textContent = money(o.totalQty);
-        qs('dcDisp').textContent = money(o.dispatchedQty);
-        qs('dcRem').textContent = money(o.remainingQty);
-        qs('dcStats').style.display = 'block';
-    }
+// ─────────────────────────────────────────────────────────────
+// DISPATCH
+// ─────────────────────────────────────────────────────────────
+if(qs('dcOrder')) qs('dcOrder').addEventListener('change', e => {
+  const o=(APP.activeOrders||[]).find(x=>x.orderId===e.target.value);
+  if(!o){ qs('dcStats').style.display='none'; qs('dcPanel').style.display='none'; return; }
+  qs('dcTot').textContent=bdtF(o.totalQty)+' CFT';
+  qs('dcDis').textContent=bdtF(o.dispatchedQty)+' CFT';
+  qs('dcRem').textContent=bdtF(o.remainingQty)+' CFT';
+  qs('dcStats').style.display='block';
 });
 
 function buildCycleRows() {
-    const count = Number(qs('dcCount').value) || 1;
-    const o = APP.activeOrders.find(x => x.orderId === qs('dcOrder').value);
-    if(!o) return toast("Select an order first.", true);
-
-    const tOpts = '<option value="">Select Truck</option>' + (APP.availableTrucks||[]).map(t => `<option data-cap="${t.cap}" value="${t.no}">${esc(t.no)} (Cap: ${t.cap})</option>`).join('');
-    const dOpts = '<option value="">Select Driver</option>' + (APP.availableDrivers||[]).map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
-    
-    let html = '';
-    for(let i=0; i<count; i++) {
-        html += `<div class="assign-row" id="cyc_row_${i}">
-            <div><label>Truck ${i+1}</label><select class="cyc-trk" onchange="autoFillCap(${i}, this)">${tOpts}</select></div>
-            <div><label>Driver ${i+1}</label><select class="cyc-drv">${dOpts}</select></div>
-            <div><label>Load Qty</label><input type="number" class="cyc-qty" placeholder="CFT" min="1"></div>
-        </div>`;
-    }
-    qs('dcAssignmentContainer').innerHTML = html;
-    qs('dcAssignmentPanel').style.display = 'block';
+  const count=Number(qs('dcCnt').value)||1;
+  const o=(APP.activeOrders||[]).find(x=>x.orderId===qs('dcOrder').value);
+  if(!o) return toast('Select an order first.',true);
+  const tOpts='<option value="">&#8212; Truck &#8212;</option>'+(APP.availableTrucks||[]).map(t=>`<option data-cap="${t.cap}" value="${esc(t.no)}">${esc(t.no)} (${t.cap} CFT)</option>`).join('');
+  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+(APP.availableDrivers||[]).map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  let html='';
+  for(let i=0;i<count;i++){
+    html+=`<div class="ar" id="cr_${i}">
+      <div class="fi"><label>Truck ${i+1}</label><select class="ct" onchange="afc(${i},this)">${tOpts}</select></div>
+      <div class="fi"><label>Driver ${i+1}</label><select class="cd">${dOpts}</select></div>
+      <div class="fi"><label>Load (CFT)</label><input type="number" class="cq" placeholder="${Math.min(247,Math.round(o.remainingQty))}" min="1"></div>
+    </div>`;
+  }
+  qs('dcRows').innerHTML=html; qs('dcPanel').style.display='block';
 }
 
-function autoFillCap(idx, selectEl) {
-    const selected = selectEl.options[selectEl.selectedIndex];
-    const cap = selected.getAttribute('data-cap');
-    if(cap) document.querySelector(`#cyc_row_${idx} .cyc-qty`).value = cap;
+function afc(i, sel) {
+  const cap=sel.options[sel.selectedIndex].getAttribute('data-cap');
+  if(cap) document.querySelector(`#cr_${i} .cq`).value=cap;
 }
 
-async function submitDispatchCycle() {
-    const orderId = qs('dcOrder').value;
-    if(!orderId) return toast("Select an order.", true);
-    
-    const count = Number(qs('dcCount').value) || 1;
-    const assigns = []; let valid = true; let totalDisp = 0;
-    
-    for(let i=0; i<count; i++) {
-        const t = document.querySelector(`#cyc_row_${i} .cyc-trk`).value;
-        const d = document.querySelector(`#cyc_row_${i} .cyc-drv`).value;
-        const q = Number(document.querySelector(`#cyc_row_${i} .cyc-qty`).value);
-        if(!t || !d || q <= 0) valid = false;
-        assigns.push({truck: t, driver: d, qty: q});
-        totalDisp += q;
-    }
-    
-    if(!valid) return toast("All assigned rows must have a Truck, Driver, and valid Qty.", true);
-    
-    const o = APP.activeOrders.find(x => x.orderId === orderId);
-    if(totalDisp > o.remainingQty) {
-        if(!confirm(`Warning: You are dispatching ${totalDisp} CFT, but only ${o.remainingQty} CFT is remaining. Proceed anyway?`)) return;
-    }
-
-    try {
-        const res = await gs('dispatchPartialOrder', { orderId: orderId, assignments: assigns });
-        APP = res.data;
-        buildDropdowns(); renderDashboard();
-        toast("Cycle Dispatched! Trips added to active list.");
-        qs('dcAssignmentPanel').style.display = 'none';
-        qs('dcStats').style.display = 'none';
-        qs('dcOrder').value = '';
-    } catch(err) { toast(err.message, true); }
+async function submitCycle() {
+  const orderId=qs('dcOrder').value; if(!orderId) return toast('Select an order.',true);
+  const count=Number(qs('dcCnt').value)||1;
+  const assigns=[]; let valid=true, total=0;
+  for(let i=0;i<count;i++){
+    const t=document.querySelector(`#cr_${i} .ct`).value;
+    const d=document.querySelector(`#cr_${i} .cd`).value;
+    const q=Number(document.querySelector(`#cr_${i} .cq`).value);
+    if(!t||!d||q<=0) valid=false;
+    assigns.push({truck:t,driver:d,qty:q}); total+=q;
+  }
+  if(!valid) return toast('All rows need Truck, Driver, and valid Qty.',true);
+  const o=(APP.activeOrders||[]).find(x=>x.orderId===orderId);
+  if(o&&total>o.remainingQty&&!confirm(`Dispatching ${total} CFT but only ${o.remainingQty} CFT remaining. Proceed?`)) return;
+  try{
+    const res=await gs('dispatchPartialOrder',{orderId,assignments:assigns});
+    APP=res.data; buildDropdowns(); renderDashboard();
+    toast('&#128640; Cycle dispatched!');
+    qs('dcPanel').style.display='none'; qs('dcStats').style.display='none'; qs('dcOrder').value='';
+  }catch(err){toast(err.message,true);}
 }
 
-// =====================================================================
-// OPERATIONS INSTANT INPUT (Tab 4)
-// =====================================================================
-if(qs('iiEvent')) qs('iiEvent').addEventListener('change', (e) => {
-    qs('iiDistWrap').style.display = (e.target.value === 'return') ? 'block' : 'none';
+// ─────────────────────────────────────────────────────────────
+// OPS CONSOLE
+// ─────────────────────────────────────────────────────────────
+if(qs('iiEv')) qs('iiEv').addEventListener('change', e => {
+  qs('iiDistWrap').style.display=e.target.value==='return'?'block':'none';
 });
 
-async function submitInstantEvent() {
-    const rowNo = qs('iiTrip').value;
-    if(!rowNo) return toast("Select a trip first.", true);
-    
-    const payload = {
-        rowNo: rowNo, event: qs('iiEvent').value,
-        date: qs('iiDate').value, time: qs('iiTime').value,
-        distanceKm: qs('iiDistance').value
-    };
-    
-    try {
-        const res = await gs('saveInstantEvent', payload);
-        APP = res.data;
-        buildDropdowns(); renderDashboard();
-        toast("Status successfully updated to Centralized Data!");
-        qs('iiDistance').value = '';
-    } catch(e) { toast(e.message, true); }
+async function submitOps() {
+  const rowNo=qs('iiTrip').value; if(!rowNo) return toast('Select a trip first.',true);
+  try{
+    const res=await gs('saveInstantEvent',{rowNo,event:qs('iiEv').value,date:qs('iiDate').value,time:qs('iiTime').value,distanceKm:qs('iiDist').value});
+    APP=res.data; buildDropdowns(); renderDashboard();
+    toast('&#10003; Status updated!'); qs('iiDist').value='';
+  }catch(err){toast(err.message,true);}
 }
 
-async function saveSettings(){
+// ─────────────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────────────
+async function saveCfg() {
+  const p={truckCapacity:qs('stCap').value,avgSpeedKmph:qs('stSpd').value,fixedTripBDT:qs('stFix').value,perKmBDT:qs('stKm').value,pumpChargeBDT:qs('stPmp').value,loadingChargeBDT:qs('stLd').value,unloadingChargeBDT:qs('stUl').value,idleCostPerHourBDT:qs('stIdl').value,contingencyPct:qs('stCon').value,loadingBufferMin:qs('stLBuf').value,unloadingBufferMin:qs('stUBuf').value};
+  try{APP=await gs('saveCostSettings',p);buildDropdowns();renderDashboard();toast('&#10003; Settings saved.');}
+  catch(err){toast(err.message,true);}
+}
+
+// ─────────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────────
+async function boot() {
+  initDates();
+  toast('Loading dashboard data...');
   try {
-    const payload = { truckCapacity: qs('stCap').value, avgSpeedKmph: qs('stSpeed').value, fixedTripBDT: qs('stFixed').value, perKmBDT: qs('stKm').value, pumpChargeBDT: qs('stPump').value, loadingChargeBDT: qs('stLoad').value, unloadingChargeBDT: qs('stUnload').value, idleCostPerHourBDT: qs('stIdle').value, contingencyPct: qs('stCont').value, loadingBufferMin: qs('stLoadBuf').value, unloadingBufferMin: qs('stUnloadBuf').value }; 
-    APP = await gs('saveCostSettings', payload); 
+    APP = await gs('getBootstrapData');
     buildDropdowns(); renderDashboard();
-    toast('Settings saved.'); 
-  } catch (e) { toast(e.message, true); } 
+    toast('&#10003; Dashboard loaded.');
+  } catch(err) { toast('Load failed: '+err.message, true); }
 }
 
-// Boot Sequence
-window.onload = async () => {
-    initDates();
-    if(API_URL.includes("YOUR_URL_ID_HERE")) return toast("PASTE YOUR API URL IN HTML!", true);
-    try {
-        APP = await gs('getBootstrapData');
-        buildDropdowns();
-        renderDashboard();
-    } catch(e) {}
-};
+window.onload = boot;
+window.showTab=showTab; window.toggleSb=toggleSb;
+window.calculateRequirements=calculateRequirements; window.saveMasterOrder=saveMasterOrder;
+window.buildCycleRows=buildCycleRows; window.afc=afc; window.submitCycle=submitCycle;
+window.submitOps=submitOps; window.saveCfg=saveCfg; window.boot=boot;
 </script>
 </body>
 </html>
