@@ -225,6 +225,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
       <button class="nb" onclick="showTab('order',this)"><span class="ni">&#128203;</span>Order Creation</button>
       <button class="nb" onclick="showTab('dispatch',this)"><span class="ni">&#128260;</span>Dispatch Cycles</button>
       <button class="nb" onclick="showTab('ops',this)"><span class="ni">&#9889;</span>Operations Console</button>
+      <button class="nb" onclick="showTab('formlog',this)"><span class="ni">&#128221;</span>Driver Form Log</button>
     </div>
     <div class="sb-sec">
       <div class="sb-lbl">System</div>
@@ -389,6 +390,42 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
+      <div id="formlog" class="sec">
+        <div class="ph">
+          <div><div class="pt">Driver Form Log</div><div class="ps">Bangla Google Form submissions &#8594; auto-translated &#8594; live trip updates</div></div>
+          <button class="rbtn" onclick="refreshFormLog()">&#8635; Refresh</button>
+        </div>
+        <div class="pn" style="border-color:var(--gold);margin-bottom:15px">
+          <div class="pnh"><div class="pnt">&#128221; Google Form Setup Status</div><span class="tg twa" id="formSetupBadge">Setup Required</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Form Link (share with drivers)</div>
+              <div id="formLinkBox" style="background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:10px 13px;font-family:var(--mono);font-size:12px;color:var(--sub);word-break:break-all">
+                Set your Google Form URL in the box below after creating it
+              </div>
+              <div style="margin-top:8px;display:flex;gap:8px">
+                <input id="formUrlInput" type="text" placeholder="Paste Google Form URL here..." style="flex:1">
+                <button class="btn bs bn" onclick="saveFormUrl()" style="white-space:nowrap;padding:10px 14px">Save</button>
+                <button class="btn bs bn" onclick="openFormUrl()" style="white-space:nowrap;padding:10px 14px">&#128279; Open</button>
+              </div>
+            </div>
+            <div style="font-size:13px;line-height:1.7;color:var(--sub)">
+              <b style="color:var(--gold)">How it works:</b><br>
+              Driver submits Bangla form &#8594; Response saved to sheet &#8594; GAS trigger auto-processes &#8594; Centralized Data updated &#8594; Dashboard refreshes
+              <br><br>
+              <b style="color:var(--gold)">Trigger:</b> Must set <code style="background:var(--ink3);padding:1px 5px;border-radius:3px">onFormSubmit</code> as a Form Submit trigger in Apps Script.
+            </div>
+          </div>
+        </div>
+
+        <div class="pn">
+          <div class="pnh"><div class="pnt">Recent Form Submissions (Last 50)</div><span class="tg tdm" id="formLogCount">0 entries</span></div>
+          <div class="tw" id="formLogTable">
+            <div style="font-size:13px;color:var(--dim);padding:12px 0">Loading form submissions...</div>
+          </div>
+        </div>
+      </div>
+
       <div id="cfg" class="sec">
         <div class="ph"><div><div class="pt">Cost Model Settings</div><div class="ps">Configure plant parameters and BDT cost factors</div></div></div>
         <div class="pn">
@@ -402,13 +439,13 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             <div class="fi"><label>Average Speed (km/h)</label><input id="stSpd" type="number"></div>
             <div class="fi"><label>Fixed Trip Cost / Truck (BDT)</label><input id="stFix" type="number"></div>
             <div class="fi"><label>Cost per km / Truck (BDT)</label><input id="stKm" type="number"></div>
-            <div class="fi"><label>Pump Charge / Truck (BDT)</label><input id="stPmp" type="number"></div>
-            <div class="fi"><label>Idle Cost / Hr / Truck (BDT)</label><input id="stIdl" type="number"></div>
-            <div class="fi"><label>Loading Charge / Truck (BDT)</label><input id="stLd" type="number"></div>
-            <div class="fi"><label>Unloading Charge / Truck (BDT)</label><input id="stUl" type="number"></div>
+            <div class="fi"><label>Pump Charge</label><input id="stPmp" type="number"></div>
+            <div class="fi"><label>Idle Cost/Hr</label><input id="stIdl" type="number"></div>
+            <div class="fi"><label>Load Charge</label><input id="stLd" type="number"></div>
+            <div class="fi"><label>Unload Charge</label><input id="stUl" type="number"></div>
             <div class="fi"><label>Contingency %</label><input id="stCon" type="number"></div>
-            <div class="fi"><label>Loading Buffer (min)</label><input id="stLBuf" type="number"></div>
-            <div class="fi"><label>Unloading Buffer (min)</label><input id="stUBuf" type="number"></div>
+            <div class="fi"><label>Load Buffer Min</label><input id="stLBuf" type="number"></div>
+            <div class="fi"><label>Unload Buffer Min</label><input id="stUBuf" type="number"></div>
             <div class="fi" style="align-self:end"><button class="btn bp" onclick="saveCfg()">Save Settings</button></div>
           </div>
         </div>
@@ -423,7 +460,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbwrK5b1IfgF9eiUgvbJOXbwasTmHK5Uv77KWF6D_-T2qUpnNQW5xdM5_pCA5To9dPvt-A/exec";
+const API = "https://script.google.com/macros/s/AKfycbyHbtrzGUl8tIY8ZxawOX3F_gNlh-97I0gJcMEvQMJVpebNcvVv6SDxQg9OOSugpVUGqA/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -467,7 +504,6 @@ function gs(fn, args) {
 
 // ─────────────────────────────────────────────────────────────
 // BROWSER-SIDE GEOCODING via Nominatim
-// Called from browser (works fine) — GAS never geocodes
 // ─────────────────────────────────────────────────────────────
 function geoBar(state, msg) {
   const bar=qs('geoBar'), icon=qs('geoIcon'), txt=qs('geoMsg');
@@ -478,7 +514,6 @@ function geoBar(state, msg) {
 function hideGeoBar() { qs('geoBar').style.display='none'; }
 
 async function geocodeBrowser(address) {
-  // Try with full address first, then simpler fallback
   const queries = [address, address.replace(/[-\d]+/g,'').trim()];
   for (const q of queries) {
     if (!q.trim()) continue;
@@ -504,7 +539,6 @@ function ensureMap() {
   OMAP = L.map('orderMap',{zoomControl:true}).setView([PLANT_LAT,PLANT_LON], 11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     {attribution:'&copy; OpenStreetMap', maxZoom:19}).addTo(OMAP);
-  // Plant marker — amber pulsing ring
   const pIcon = L.divIcon({className:'', iconSize:[18,18], iconAnchor:[9,9],
     html:`<div style="width:18px;height:18px;border-radius:50%;background:var(--gold);border:3px solid #fff;box-shadow:0 0 0 4px var(--gold-glow),0 2px 12px rgba(245,166,35,.5)"></div>`});
   L.marker([PLANT_LAT,PLANT_LON],{icon:pIcon}).addTo(OMAP)
@@ -512,14 +546,12 @@ function ensureMap() {
 }
 
 function showAreaOnMap(lat, lon, address) {
-  // Show the destination area before routing completes
   ensureMap();
   if (DMKR) { OMAP.removeLayer(DMKR); DMKR=null; }
   const dIcon = L.divIcon({className:'', iconSize:[18,18], iconAnchor:[9,9],
     html:`<div style="width:18px;height:18px;border-radius:50%;background:var(--green);border:3px solid #fff;box-shadow:0 0 0 4px var(--green-soft),0 2px 12px rgba(45,212,160,.4)"></div>`});
   DMKR = L.marker([lat,lon],{icon:dIcon}).addTo(OMAP)
     .bindPopup(`<b style="color:#2dd4a0">&#128205; Delivery Site</b><br><span style="font-size:10.5px;color:#7e93b5">${esc(address)}</span>`);
-  // Fit to show both plant + destination
   const bounds = L.latLngBounds([[PLANT_LAT,PLANT_LON],[lat,lon]]);
   OMAP.fitBounds(bounds, {padding:[55,55], maxZoom:14});
   setTimeout(()=>{ if(OMAP) OMAP.invalidateSize(); }, 150);
@@ -533,7 +565,6 @@ function drawRoute(res) {
       weight: 4.5, opacity: .88,
       dashArray: res.fallback ? '9,7' : null
     }).addTo(OMAP);
-    // Refine fit to actual route
     OMAP.fitBounds(RLAYER.getBounds(), {padding:[50,50], maxZoom:14});
   }
 }
@@ -550,6 +581,7 @@ function showTab(id, btn) {
   if (btn) btn.classList.add('on');
   if (window.innerWidth<=820) qs('sb').classList.remove('on');
   if (id==='order' && OMAP) setTimeout(()=>OMAP.invalidateSize(), 200);
+  if (id==='formlog') refreshFormLog();
   qs('mainEl').scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -635,12 +667,7 @@ function renderDashboard() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ORDER CREATION — KEY FLOW:
-//  1) Client select → fill address from GAS
-//  2) Step 1 click → browser geocodes address via Nominatim
-//  3) Map immediately shows the area with destination pin
-//  4) GAS called with destLat/destLon → OSRM routing
-//  5) Route drawn on map, costs shown, Step 2 enabled
+// ORDER CREATION
 // ─────────────────────────────────────────────────────────────
 if(qs('ocClient')) qs('ocClient').addEventListener('change', async e => {
   if (!e.target.value) return;
@@ -669,7 +696,7 @@ async function calculateRequirements() {
       btn.disabled=false; btn.innerHTML='&#128506; Step 1: Geocode & Calculate Route';
       return toast('Address not found on map. Please enter a Distance Override or refine the address.', true);
     }
-    // Has override — proceed with Dhaka center coords as placeholder
+    // Has override
     geoBar('err', 'Address not found — using Distance Override with approximate map.');
     await proceedWithCoords(23.8103, 90.4125, address, ovr, btn, true);
     return;
@@ -677,7 +704,7 @@ async function calculateRequirements() {
 
   geoBar('ok', `Found: ${geo.display || address} (${geo.lat.toFixed(4)}, ${geo.lon.toFixed(4)})`);
 
-  // STEP 2 — Show area on map immediately
+  // STEP 2
   qs('resultSec').style.display = 'block';
   ensureMap();
   showAreaOnMap(geo.lat, geo.lon, address);
@@ -696,12 +723,10 @@ async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed)
     });
     CALC = res;
 
-    // Map update
     qs('resultSec').style.display='block';
     ensureMap();
     drawRoute(res);
 
-    // Badges & info
     qs('rDist').textContent   = `${res.distanceKm} km`;
     qs('rETA').textContent    = `ETA: ${res.etaMin} min`;
     qs('rTrucks').textContent = `${res.trucksNeeded} truck(s)`;
@@ -714,7 +739,6 @@ async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed)
 
     qs('fallbackNote').style.display = (res.fallback||geoFailed) ? 'flex' : 'none';
 
-    // Cost breakdown
     const c = res.costs||{};
     const rows = [['Fixed Trip','fixed'],['Road (distance)','road'],['Pump','pump'],['Loading','loading'],['Unloading','unloading'],['Time Cost','time'],['Contingency','contingency']];
     qs('costRows').innerHTML = rows.map(([l,k])=>`<div class="cr"><span class="cl">${l}</span><span>BDT ${bdtF(c[k])}</span></div>`).join('')+
@@ -830,7 +854,7 @@ async function saveCfg() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// BOOT
+// DRIVER FORM LOG & BOOT
 // ─────────────────────────────────────────────────────────────
 async function boot() {
   initDates();
@@ -839,7 +863,71 @@ async function boot() {
     APP = await gs('getBootstrapData');
     buildDropdowns(); renderDashboard();
     toast('&#10003; Dashboard loaded.');
+    const savedUrl = localStorage.getItem('armcl_form_url');
+    if (savedUrl) { qs('formUrlInput').value=savedUrl; qs('formLinkBox').textContent=savedUrl; qs('formSetupBadge').textContent='Form Linked ✓'; qs('formSetupBadge').className='tg tok'; }
   } catch(err) { toast('Load failed: '+err.message, true); }
+}
+
+function saveFormUrl() {
+  const url = qs('formUrlInput').value.trim();
+  if (!url) return toast('Paste a Google Form URL first.', true);
+  localStorage.setItem('armcl_form_url', url);
+  qs('formLinkBox').textContent = url;
+  qs('formSetupBadge').textContent = 'Form Linked ✓';
+  qs('formSetupBadge').className = 'tg tok';
+  toast('✓ Form URL saved.');
+}
+
+function openFormUrl() {
+  const url = qs('formUrlInput').value.trim() || localStorage.getItem('armcl_form_url');
+  if (!url) return toast('No form URL saved yet.', true);
+  window.open(url, '_blank');
+}
+
+async function refreshFormLog() {
+  try {
+    const data = await gs('getFormLogData');
+    renderFormLog(data);
+    toast('✓ Form log refreshed.');
+  } catch(err) { toast('Failed: '+err.message, true); }
+}
+
+function renderFormLog(rows) {
+  const tbl = qs('formLogTable');
+  const cnt = qs('formLogCount');
+  if (!rows || !rows.length) {
+    tbl.innerHTML = '<div style="font-size:13px;color:var(--dim);padding:12px 0">No form submissions yet.</div>';
+    if(cnt) cnt.textContent = '0 entries';
+    return;
+  }
+  if(cnt) cnt.textContent = rows.length + ' entries';
+  tbl.innerHTML = `<table>
+    <thead><tr>
+      <th>সময় (Time)</th><th>অর্ডার (Order ID)</th><th>ট্রাক (Truck)</th>
+      <th>ইভেন্ট বাংলা</th><th>Event (English)</th>
+      <th>তারিখ</th><th>সময়</th><th>দূরত্ব (km)</th>
+      <th>Status</th><th>Row</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(r => `<tr>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.timestamp)}</td>
+        <td><b style="color:var(--gold);font-family:var(--mono)">${esc(r.orderId)}</b></td>
+        <td><b style="color:var(--text)">${esc(r.truck)}</b></td>
+        <td>${esc(r.evBangla)}</td>
+        <td>${stTag2(r.evEnglish)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.date)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.time)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.distance)}</td>
+        <td>${r.status.includes('✅') ? '<span class="tg tok">'+esc(r.status)+'</span>' : r.status.includes('❌') ? '<span class="tg tba">'+esc(r.error||r.status)+'</span>' : '<span class="tg tdm">'+esc(r.status)+'</span>'}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.matchedRow)}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function stTag2(ev) {
+  const map={'Factory Out':'twa','Client Arrival':'tcn','Unloading Start':'tbl','Unloading End':'tok','Factory Return':'tdm'};
+  const cls=map[ev]||'tdm';
+  return `<span class="tg ${cls}">${esc(ev)}</span>`;
 }
 
 window.onload = boot;
@@ -847,6 +935,7 @@ window.showTab=showTab; window.toggleSb=toggleSb;
 window.calculateRequirements=calculateRequirements; window.saveMasterOrder=saveMasterOrder;
 window.buildCycleRows=buildCycleRows; window.afc=afc; window.submitCycle=submitCycle;
 window.submitOps=submitOps; window.saveCfg=saveCfg; window.boot=boot;
+window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFormLog=refreshFormLog;
 </script>
 </body>
 </html>
