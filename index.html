@@ -460,7 +460,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbyHbtrzGUl8tIY8ZxawOX3F_gNlh-97I0gJcMEvQMJVpebNcvVv6SDxQg9OOSugpVUGqA/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbzksEJm_30oF7PJyPqvD7ZpoL5o5_B8C8qqU7NtJFTc3cMRAnunf7N03DCrwQvfF4otjA/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -939,3 +939,9 @@ window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFo
 </script>
 </body>
 </html>
+}
+
+I have found a bug, where it does not calculates the running hours(RH) and Quantity delivered (CFT)
+for RH on Centralized delivery Data sheet column U,V,W,X,AG,AH 
+and on truck output data  running hours (column J) and Quantity Delivered (CFT)(col K) doesn't sums correctly .
+tell me what went wrong and provide full code and html to fix it. keep other features same as it is
