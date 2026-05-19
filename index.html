@@ -208,6 +208,24 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 .leaflet-control-zoom a:hover{background:var(--ink3)!important;color:var(--gold)!important}
 .leaflet-control-attribution{background:rgba(10,14,26,.8)!important;color:var(--dim)!important;font-size:10px!important}
 
+
+/* ── CAPACITY SIMULATOR ───────────────── */
+.lockbox{max-width:520px;margin:0 auto;background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:22px}
+.lock-ico{width:46px;height:46px;border-radius:12px;background:var(--gold-soft);display:grid;place-items:center;color:var(--gold);font-size:22px;margin-bottom:12px}
+.capgrid{display:grid;grid-template-columns:1.05fr .95fr;gap:15px;width:100%;min-width:0}
+.sliderrow{display:grid;grid-template-columns:180px 1fr 84px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--edge)}
+.sliderrow:last-child{border-bottom:none}
+.sliderrow label{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+.sliderrow input[type=range]{padding:0;background:transparent;border:none;accent-color:var(--gold)}
+.sliderrow input[type=number]{font-family:var(--mono);font-size:12px;padding:8px 9px}
+.simlist{background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:12px}
+.simrow{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--edge);font-size:12.5px}
+.simrow:last-child{border-bottom:none}
+.simrow b{font-family:var(--mono);font-size:14px;color:var(--text);font-weight:500;text-align:right}
+.simrow .blue{color:var(--blue)}.simrow .green{color:var(--green)}.simrow .gold{color:var(--gold)}.simrow .red{color:var(--red)}
+.capnote{background:var(--cyan-soft);border:1px solid rgba(52,209,192,.25);border-radius:var(--r);padding:10px 13px;font-size:12.5px;color:var(--sub);line-height:1.6}
+@media(max-width:1100px){.capgrid{grid-template-columns:1fr}.sliderrow{grid-template-columns:1fr}.sliderrow input[type=number]{max-width:140px}}
+
 /* ── RESPONSIVE ───────────────────────── */
 @media(max-width:1280px){.kg{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:1100px){.kg{grid-template-columns:repeat(4,1fr)}.g2,.g3{grid-template-columns:1fr}.g2e{grid-template-columns:1fr 1fr}}
@@ -266,6 +284,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
     </div>
     <div class="sb-sec">
       <div class="sb-lbl">System</div>
+      <button class="nb" onclick="showTab('capacity',this)"><span class="ni">&#128200;</span>Capacity Simulator</button>
       <button class="nb" onclick="showTab('cfg',this)"><span class="ni">&#9881;</span>Cost Model</button>
     </div>
     <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.0<br>Dhour Plant, Dhaka, Bangladesh</p></div>
@@ -464,6 +483,53 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
+      <div id="capacity" class="sec">
+        <div class="ph">
+          <div><div class="pt">Capacity Simulator</div><div class="ps">Securely change TM capacity assumptions and instantly update the Capacity Planning sheet</div></div>
+          <button class="rbtn" onclick="loadCapacityModel()">&#8635; Refresh Model</button>
+        </div>
+
+        <div id="capLock" class="lockbox">
+          <div class="lock-ico">&#128274;</div>
+          <div class="pnt" style="margin-bottom:6px">PIN required</div>
+          <div style="font-size:12.5px;color:var(--sub);line-height:1.6;margin-bottom:14px">This section can edit Capacity Planning assumptions. Enter the simulator PIN to unlock it.</div>
+          <div class="fi" style="margin-bottom:10px"><label>Simulator PIN</label><input id="capPin" type="password" inputmode="numeric" placeholder="Enter PIN"></div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin-bottom:13px"><input id="capRemember" type="checkbox" style="width:auto"> Keep saved in this browser</label>
+          <button class="btn bp" onclick="capacityLogin()">Unlock Simulator</button>
+          <details style="margin-top:14px;color:var(--sub);font-size:12.5px">
+            <summary style="cursor:pointer;color:var(--gold);font-weight:600">Forgot PIN?</summary>
+            <div style="margin-top:12px;display:grid;gap:10px">
+              <button class="btn bs" onclick="requestCapOtp()">Send OTP to md.arifulislam@akijresource.com</button>
+              <div class="fg2b">
+                <div class="fi"><label>Email OTP</label><input id="capOtp" type="text" inputmode="numeric" placeholder="6-digit OTP"></div>
+                <div class="fi"><label>New PIN</label><input id="capNewPin" type="password" inputmode="numeric" placeholder="4-10 digits"></div>
+              </div>
+              <button class="btn bg" onclick="resetCapPin()">Reset PIN</button>
+            </div>
+          </details>
+        </div>
+
+        <div id="capSim" style="display:none">
+          <div class="capgrid">
+            <div class="pn">
+              <div class="pnh"><div class="pnt">Dynamic Assumption Controls</div><span class="tg twa">Sheet-linked</span></div>
+              <div id="capSliderBox"></div>
+              <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+                <button class="btn bp" onclick="saveCapAssumptions()" style="width:auto">Save to Capacity Planning Sheet</button>
+                <button class="btn bs" onclick="capacityLogout()" style="width:auto">Lock Section</button>
+              </div>
+            </div>
+            <div class="pn">
+              <div class="pnh"><div class="pnt">Cycle Time & Capacity Output</div><span class="pbg" id="capLiveBadge">LIVE</span></div>
+              <div class="simlist" id="capScenarioRows"></div>
+              <div class="capnote" style="margin-top:13px">
+                This simulator writes to <b>Capacity Planning!Q2:Q16</b>. The right-side formula error is fixed by using Q-column values instead of P-column labels. Sheet rows refresh after save, after every driver form submission, after Operations Console updates, and after manual rebuild.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="cfg" class="sec">
         <div class="ph"><div><div class="pt">Cost Model Settings</div><div class="ps">Configure plant parameters and BDT cost factors</div></div></div>
         <div class="pn">
@@ -498,11 +564,11 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbxXqpgn_6Zs6P2v4VHceWbLkXYkLYkBe5buCUpDmPbmMzlU-GrDYMy9MHmVfsSs3ueamg/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbzXnidC9d5M82JnrxwUPTHuXZE0-ty5Cn6BpMb_inxq3dClhuFRYAzECenZ6d-82Uz7Xw/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
-let APP = {}, OMAP = null, RLAYER = null, DMKR = null, CALC = {}, CH = {};
+let APP = {}, OMAP = null, RLAYER = null, DMKR = null, CALC = {}, CH = {}, CAP = {token:null, vals:{}};
 
 // ─────────────────────────────────────────────────────────────
 // UTILS
@@ -620,6 +686,7 @@ function showTab(id, btn) {
   if (window.innerWidth<=820) qs('sb').classList.remove('on');
   if (id==='order' && OMAP) setTimeout(()=>OMAP.invalidateSize(), 200);
   if (id==='formlog') refreshFormLog();
+  if (id==='capacity') openCapacitySection();
   qs('mainEl').scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -903,6 +970,144 @@ async function submitOps() {
   }catch(err){toast(err.message,true);}
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// SECURED CAPACITY SIMULATOR
+// ─────────────────────────────────────────────────────────────
+const CAP_FIELDS = [
+  {k:'avgDistanceOneWayKm', l:'Distance one-way (km)', min:1, max:80, step:1, unit:'km'},
+  {k:'loadedSpeedKmph', l:'Loaded speed (km/h)', min:5, max:60, step:1, unit:'km/h'},
+  {k:'returnSpeedKmph', l:'Return speed (km/h)', min:5, max:70, step:1, unit:'km/h'},
+  {k:'plantLoadingMin', l:'Plant loading (min)', min:5, max:120, step:1, unit:'min'},
+  {k:'waitAtSiteMin', l:'Wait at site (min)', min:0, max:90, step:1, unit:'min'},
+  {k:'pumpUnloadMin', l:'Pump unloading (min)', min:5, max:120, step:1, unit:'min'},
+  {k:'headCastUnloadMin', l:'Head cast unloading (min)', min:30, max:240, step:1, unit:'min'},
+  {k:'directUnloadMin', l:'Direct unloading (min)', min:10, max:180, step:1, unit:'min'},
+  {k:'tmDrumCapacityCft', l:'TM drum capacity (CFT)', min:100, max:350, step:1, unit:'CFT'},
+  {k:'activeTrucksOverride', l:'Active trucks', min:1, max:60, step:1, unit:'TM'},
+  {k:'driverShiftHr', l:'Driver shift (hr)', min:6, max:24, step:1, unit:'hr'},
+  {k:'fleetEfficiency', l:'Fleet efficiency', min:0.5, max:1, step:0.01, unit:'x'}
+];
+
+async function openCapacitySection() {
+  const saved = localStorage.getItem('armcl_cap_token') || sessionStorage.getItem('armcl_cap_token') || '';
+  if(saved && !CAP.token) {
+    try {
+      const r = await gs('checkCapacityAuth',{token:saved});
+      if(r.ok) { CAP.token=saved; showCapSim(true); await loadCapacityModel(); return; }
+    } catch(e) {}
+  }
+  showCapSim(!!CAP.token);
+  if(CAP.token) loadCapacityModel();
+}
+
+function showCapSim(open) {
+  if(qs('capLock')) qs('capLock').style.display = open ? 'none' : 'block';
+  if(qs('capSim')) qs('capSim').style.display = open ? 'block' : 'none';
+}
+
+async function capacityLogin() {
+  const pin = qs('capPin').value.trim();
+  if(!pin) return toast('Enter simulator PIN.', true);
+  try {
+    const r = await gs('verifyCapacityPin', {pin});
+    CAP.token = r.token;
+    if(qs('capRemember').checked) localStorage.setItem('armcl_cap_token', r.token);
+    else sessionStorage.setItem('armcl_cap_token', r.token);
+    qs('capPin').value=''; showCapSim(true); await loadCapacityModel();
+    toast('Capacity simulator unlocked.');
+  } catch(err) { toast(err.message, true); }
+}
+
+function capacityLogout() {
+  CAP.token=null; CAP.vals={}; localStorage.removeItem('armcl_cap_token'); sessionStorage.removeItem('armcl_cap_token');
+  showCapSim(false); toast('Capacity simulator locked.');
+}
+
+async function requestCapOtp() {
+  try { const r = await gs('requestCapacityOtp',{}); toast(r.message || 'OTP sent.'); }
+  catch(err) { toast('OTP failed: '+err.message, true); }
+}
+
+async function resetCapPin() {
+  const otp=qs('capOtp').value.trim(), newPin=qs('capNewPin').value.trim();
+  if(!otp||!newPin) return toast('Enter OTP and new PIN.', true);
+  try { const r=await gs('resetCapacityPin',{otp,newPin}); toast(r.message||'PIN reset.'); qs('capOtp').value=''; qs('capNewPin').value=''; }
+  catch(err){ toast(err.message,true); }
+}
+
+async function loadCapacityModel() {
+  if(!CAP.token) return showCapSim(false);
+  try {
+    const r = await gs('getCapacityModel', {token:CAP.token});
+    CAP.vals = r.assumptions || {};
+    renderCapSliders(); calcCapScenario();
+  } catch(err) {
+    toast(err.message, true); capacityLogout();
+  }
+}
+
+function renderCapSliders() {
+  const box=qs('capSliderBox'); if(!box) return;
+  box.innerHTML = CAP_FIELDS.map(f=>{
+    let val = CAP.vals[f.k]; if(val===undefined||val===null||val==='') val=f.min;
+    return `<div class="sliderrow">
+      <label>${f.l}</label>
+      <input type="range" id="cap_${f.k}_rng" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" oninput="syncCap('${f.k}','rng')">
+      <input type="number" id="cap_${f.k}_num" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" oninput="syncCap('${f.k}','num')">
+    </div>`;
+  }).join('');
+}
+
+function syncCap(k, src) {
+  const rn=qs(`cap_${k}_rng`), nm=qs(`cap_${k}_num`);
+  if(!rn||!nm) return;
+  if(src==='rng') nm.value=rn.value; else rn.value=nm.value;
+  CAP.vals[k]=Number(nm.value);
+  calcCapScenario();
+}
+
+function calcCapScenario() {
+  const v={}; CAP_FIELDS.forEach(f=>v[f.k]=Number((qs(`cap_${f.k}_num`)||{}).value || CAP.vals[f.k] || 0));
+  const loadedTravel = v.avgDistanceOneWayKm / v.loadedSpeedKmph * 60;
+  const returnTravel = v.avgDistanceOneWayKm / v.returnSpeedKmph * 60;
+  const pumpCycle = v.plantLoadingMin + loadedTravel + returnTravel + v.waitAtSiteMin + v.pumpUnloadMin;
+  const headCycle = v.plantLoadingMin + loadedTravel + returnTravel + v.waitAtSiteMin + v.headCastUnloadMin;
+  const directCycle = v.plantLoadingMin + loadedTravel + returnTravel + v.waitAtSiteMin + v.directUnloadMin;
+  const theoretical = 1440 / pumpCycle;
+  const feasible = (v.driverShiftHr * 60 * v.fleetEfficiency) / pumpCycle;
+  const capCFT = v.activeTrucksOverride * feasible * v.tmDrumCapacityCft;
+  const capCUM = capCFT / 35.3147;
+  const smv120 = 120 / pumpCycle * 100;
+  const rows=[
+    ['Loaded travel', Math.round(loadedTravel)+' min', 'blue'],
+    ['Return travel', Math.round(returnTravel)+' min', 'blue'],
+    ['Pump cycle total', Math.round(pumpCycle)+' min ('+(pumpCycle/60).toFixed(2)+' hr)', 'gold'],
+    ['Head cast cycle total', Math.round(headCycle)+' min', 'gold'],
+    ['Direct cycle total', Math.round(directCycle)+' min', 'gold'],
+    ['Theoretical trips/day (24h)', theoretical.toFixed(2), ''],
+    ['Feasible trips/day ('+v.driverShiftHr+'h × '+Math.round(v.fleetEfficiency*100)+'%)', feasible.toFixed(2), 'green'],
+    ['Daily fleet capacity', bdtF(Math.round(capCFT))+' CFT', 'green'],
+    ['Daily fleet capacity', bdtF(Math.round(capCUM))+' CUM', 'green'],
+    ['SMV efficiency vs old 120-min target', Math.round(smv120)+'%', smv120>=90?'green':smv120>=70?'gold':'red'],
+    ['Recommended SMV target', Math.round(pumpCycle)+' min', 'blue']
+  ];
+  if(qs('capScenarioRows')) qs('capScenarioRows').innerHTML = rows.map(r=>`<div class="simrow"><span>${r[0]}</span><b class="${r[2]}">${r[1]}</b></div>`).join('');
+  if(qs('capLiveBadge')) qs('capLiveBadge').textContent = Math.round(pumpCycle)+' MIN';
+}
+
+async function saveCapAssumptions() {
+  if(!CAP.token) return toast('Unlock simulator first.', true);
+  const assumptions={}; CAP_FIELDS.forEach(f=>assumptions[f.k]=Number((qs(`cap_${f.k}_num`)||{}).value || 0));
+  try {
+    const r = await gs('saveCapacityAssumptions', {token:CAP.token, assumptions});
+    CAP.vals = r.assumptions || assumptions;
+    if(r.data){ APP=r.data; buildDropdowns(); renderDashboard(); }
+    renderCapSliders(); calcCapScenario();
+    toast('Capacity assumptions saved and sheet updated.');
+  } catch(err) { toast(err.message,true); }
+}
+
 // ─────────────────────────────────────────────────────────────
 // SETTINGS
 // ─────────────────────────────────────────────────────────────
@@ -1016,7 +1221,9 @@ window.calculateRequirements=calculateRequirements; window.saveMasterOrder=saveM
 window.buildCycleRows=buildCycleRows; window.afc=afc; window.submitCycle=submitCycle;
 window.submitOps=submitOps; window.saveCfg=saveCfg; window.boot=boot;
 window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFormLog=refreshFormLog; window.castingBadge=castingBadge; window.toggleTheme=toggleTheme;
+window.openCapacitySection=openCapacitySection; window.capacityLogin=capacityLogin; window.capacityLogout=capacityLogout;
+window.requestCapOtp=requestCapOtp; window.resetCapPin=resetCapPin; window.loadCapacityModel=loadCapacityModel;
+window.syncCap=syncCap; window.saveCapAssumptions=saveCapAssumptions;
 </script>
 </body>
 </html>
-}
