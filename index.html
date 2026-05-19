@@ -460,7 +460,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbzksEJm_30oF7PJyPqvD7ZpoL5o5_B8C8qqU7NtJFTc3cMRAnunf7N03DCrwQvfF4otjA/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwgTS08-MsudEI7ftvfsCMbM1XtZK0wWdNIcgW5-d2a7Ungk6RjxZ7zMRFNw5AJwtrEmQ/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -600,6 +600,8 @@ function buildDropdowns() {
   if(qs('ocSku'))    qs('ocSku').innerHTML   ='<option value="">Select SKU...</option>'  +(APP.skus||[]).map(s).join('');
   if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
   if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
+  // FIXED: Populate driver dropdown on Dispatch cycle rows using allDrivers (full list, not just available)
+  // allDrivers is now returned from getBootstrapData() for use in form driver selections
 }
 
 function renderDashboard() {
@@ -789,7 +791,9 @@ function buildCycleRows() {
   const o=(APP.activeOrders||[]).find(x=>x.orderId===qs('dcOrder').value);
   if(!o) return toast('Select an order first.',true);
   const tOpts='<option value="">&#8212; Truck &#8212;</option>'+(APP.availableTrucks||[]).map(t=>`<option data-cap="${t.cap}" value="${esc(t.no)}">${esc(t.no)} (${t.cap} CFT)</option>`).join('');
-  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+(APP.availableDrivers||[]).map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  // FIXED: Use allDrivers from Driver Master for dropdown (full list)
+  const driverList = APP.allDrivers || APP.availableDrivers || [];
+  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+driverList.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
   let html='';
   for(let i=0;i<count;i++){
     html+=`<div class="ar" id="cr_${i}">
@@ -940,8 +944,3 @@ window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFo
 </body>
 </html>
 }
-
-I have found a bug, where it does not calculates the running hours(RH) and Quantity delivered (CFT)
-for RH on Centralized delivery Data sheet column U,V,W,X,AG,AH 
-and on truck output data  running hours (column J) and Quantity Delivered (CFT)(col K) doesn't sums correctly .
-tell me what went wrong and provide full code and html to fix it. keep other features same as it is
