@@ -81,14 +81,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .kc.ok{border-color:rgba(45,212,160,.22)}.kc.wa{border-color:rgba(245,166,35,.22)}.kc.ba{border-color:rgba(240,96,96,.22)}
 
 /* ── PANELS ───────────────────────────── */
-.pn{background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:20px;margin-bottom:15px}
+.pn{background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:20px;margin-bottom:15px;min-width:0}
 .pnh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--edge)}
 .pnt{font-size:15px;font-weight:700;letter-spacing:-.1px}
 .pbg{font-size:10px;padding:3px 9px;border-radius:99px;background:var(--gold-soft);color:var(--gold);font-weight:700;font-family:var(--mono)}
 
 /* ── GRID HELPERS ─────────────────────── */
-.g2{display:grid;grid-template-columns:1.1fr .9fr;gap:15px}
-.g2e{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.g2{display:grid;grid-template-columns:1.1fr .9fr;gap:15px;width:100%;min-width:0}
+.g2e{display:grid;grid-template-columns:1fr 1fr;gap:13px;width:100%;min-width:0}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px}
 .s2{grid-column:span 2}.s3{grid-column:span 3}
 .cb{height:250px;position:relative}
