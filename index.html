@@ -25,6 +25,7 @@
 html,body{height:100%;overflow:hidden}
 body{background:var(--ink);font-family:var(--font);color:var(--text);display:flex;flex-direction:column}
 
+/* grid bg texture */
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(52,209,192,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(52,209,192,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
 
 /* ── HEADER ─────────────────────────────── */
@@ -70,7 +71,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .rbtn:hover{border-color:var(--gold);color:var(--gold)}
 
 /* ── KPI GRID ─────────────────────────── */
-.kg{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:20px}
+.kg{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
 .kc{background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:15px;position:relative;overflow:hidden;animation:fu .45s ease both;transition:transform .18s,border-color .18s}
 .kc:hover{transform:translateY(-2px);border-color:var(--edge2)}
 .kc::after{content:'';position:absolute;top:-20px;right:-20px;width:70px;height:70px;background:radial-gradient(circle,var(--gold-soft) 0%,transparent 70%);pointer-events:none}
@@ -86,11 +87,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .pbg{font-size:10px;padding:3px 9px;border-radius:99px;background:var(--gold-soft);color:var(--gold);font-weight:700;font-family:var(--mono)}
 
 /* ── GRID HELPERS ─────────────────────── */
-.g2{display:grid;grid-template-columns:1.1fr .9fr;gap:15px}
-.g2e{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px}
+.g2{display:grid;grid-template-columns:1.1fr .9fr;gap:15px;width:100%;min-width:0}
+.g2e{display:grid;grid-template-columns:1fr 1fr;gap:13px;width:100%;min-width:0}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;width:100%;min-width:0}
 .s2{grid-column:span 2}.s3{grid-column:span 3}
-.cb{height:250px;position:relative}
+.cb{height:250px;position:relative;min-width:0;overflow:hidden}
 
 /* ── FLEET MINI ───────────────────────── */
 .fg{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
@@ -154,7 +155,7 @@ tbody tr:hover td{background:rgba(52,209,192,.03)}
 .cr-total{margin-top:6px;padding:10px 14px;background:var(--gold-soft);border-radius:var(--r)}
 
 /* ── ASSIGN ROWS ──────────────────────── */
-.ar{display:grid;grid-template-columns:1.4fr 1.4fr .9fr;gap:10px;padding:13px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);margin-bottom:9px;align-items:end}
+.ar{display:grid;grid-template-columns:1.2fr 1.2fr .7fr .8fr;gap:10px;padding:13px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);margin-bottom:9px;align-items:end}
 
 /* ── STAT CARDS ───────────────────────── */
 .sr{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
@@ -242,6 +243,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
           <button class="rbtn" onclick="boot()">&#8635; Refresh</button>
         </div>
         <div class="kg" id="kpiRow"></div>
+        <div id="capWarn"></div>
         <div class="g2">
           <div class="pn">
             <div class="pnh"><div class="pnt">Trip &amp; Efficiency Analytics</div></div>
@@ -383,7 +385,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <div><b style="color:var(--gold)">Active Trips</b><br>Appear immediately after a Dispatch Cycle is committed.</div>
               <div><b style="color:var(--gold)">Truck Lock</b><br>A truck stays assigned to its trip until Factory Return is submitted.</div>
               <div><b style="color:var(--gold)">Live Sync</b><br>Every submission instantly updates Dashboard KPIs, MTS, Truck Output, and SMV sheets.</div>
-              <div><b style="color:var(--gold)">Sequence</b><br>Factory Out &#8594; Arrival &#8594; Unload Start &#8594; Unload End &#8594; Factory Return</div>
+              <div><b style="color:var(--gold)">Sequence</b><br>Factory Out &#8594; Arrival &#8594; Unload Start &#8594; Unload End &#8594; Factory Return<br><br><b style="color:var(--gold)">SMV Target</b><br>Pump: 238 min | Head Cast: 286 min | Direct: 262 min</div>
             </div>
           </div>
         </div>
@@ -599,25 +601,42 @@ function buildDropdowns() {
   if(qs('ocSku'))    qs('ocSku').innerHTML   ='<option value="">Select SKU...</option>'  +(APP.skus||[]).map(s).join('');
   if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
   if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
+  // FIXED: Populate driver dropdown on Dispatch cycle rows using allDrivers (full list, not just available)
+  // allDrivers is now returned from getBootstrapData() for use in form driver selections
 }
 
 function renderDashboard() {
   const d=APP.dashboard||{};
+  const cap=APP.capacityCeiling||{};
   const kpis=[
-    {l:'Fleet Util %',    v:(d.utilPct||0)+'%',             c:'wa'},
-    {l:'Active Fleet',    v:d.activeTrucks||0,               c:''},
-    {l:'In Transit',      v:d.inTransit||0,                  c:'wa'},
-    {l:'Waiting/Unload',  v:(d.waiting||0)+(d.unloading||0), c:'wa'},
-    {l:'Completed Today', v:d.completedToday||0,             c:'ok'},
-    {l:'Breakdown',       v:d.breakdown||0,                  c:d.breakdown>0?'ba':''},
-    {l:'Avg Transit',     v:(d.avgTransit||0)+' min',        c:''},
-    {l:'Avg Wait',        v:(d.avgWait||0)+' min',           c:''},
-    {l:'Avg Unload',      v:(d.avgUnload||0)+' min',         c:''},
-    {l:'Avg Cycle',       v:(d.avgCycle||0)+' min',          c:d.avgCycle>120?'wa':'ok'},
-    {l:'Total CFT',       v:bdtF(d.totalCft||0),             c:''},
-    {l:'SMV Efficiency',  v:(d.smvEfficiency||0)+'%',        c:d.smvEfficiency>=90?'ok':d.smvEfficiency>=70?'wa':'ba'},
+    {l:'Fleet Util %',    v:(d.utilPct||0)+'%',                     c:'wa'},
+    {l:'Active Fleet',    v:d.activeTrucks||0,                       c:''},
+    {l:'In Transit',      v:d.inTransit||0,                          c:'wa'},
+    {l:'Waiting/Unload',  v:(d.waiting||0)+(d.unloading||0),         c:'wa'},
+    {l:'Completed Today', v:d.completedToday||0,                     c:'ok'},
+    {l:'Breakdown',       v:d.breakdown||0,                          c:d.breakdown>0?'ba':''},
+    {l:'Avg Transit',     v:(d.avgTransit||0)+' min',                c:''},
+    {l:'Avg Wait',        v:(d.avgWait||0)+' min',                   c:''},
+    {l:'Avg Unload',      v:(d.avgUnload||0)+' min',                 c:''},
+    {l:'Avg Cycle',       v:(d.avgCycle||0)+' min',                  c:d.avgCycle>238?'wa':'ok'},
+    {l:'Total CFT',       v:bdtF(d.totalCft||0),                     c:''},
+    {l:'SMV Efficiency',  v:(d.smvEfficiency||0)+'%',                c:d.smvEfficiency>=90?'ok':d.smvEfficiency>=70?'wa':'ba'},
+    {l:'Daily Cap (CFT)', v:bdtF(cap.dailyCapCFT||0),                c:''},
+    {l:'Dispatched Today',v:bdtF(cap.todayDispatchedCFT||0),         c:''},
+    {l:'Cap Util %',      v:(cap.utilisationPct||0)+'%',             c:(cap.utilisationPct||0)>=100?'ba':(cap.utilisationPct||0)>=85?'wa':'ok'},
+    {l:'Remaining (CFT)', v:bdtF(cap.gapCFT||0),                    c:(cap.gapCFT||0)<=0?'ba':'ok'},
   ];
   if(qs('kpiRow')) qs('kpiRow').innerHTML=kpis.map((k,i)=>`<div class="kc ${k.c}" style="animation-delay:${i*.04}s"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+
+  // Capacity warning banner
+  const cw=qs('capWarn');
+  if(cw){
+    const util=cap.utilisationPct||0;
+    if(util>=100)      cw.innerHTML=`<div style="background:var(--red-soft);border:1px solid var(--red);border-radius:var(--r);padding:10px 14px;font-size:12.5px;color:var(--red);margin-bottom:14px">&#9888; <b>Fleet at capacity</b> &#8212; ${bdtF(cap.todayDispatchedCFT)} CFT dispatched vs ${bdtF(cap.dailyCapCFT)} CFT ceiling. Do not dispatch further today.</div>`;
+    else if(util>=85)  cw.innerHTML=`<div style="background:var(--gold-soft);border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12.5px;color:var(--gold);margin-bottom:14px">&#9888; <b>Approaching capacity</b> &#8212; ${util}% utilised. ${bdtF(cap.gapCFT)} CFT remaining today. Pump trips: ${cap.pumpTrips||0} | Head Cast trips: ${cap.headTrips||0}</div>`;
+    else if(util>0)    cw.innerHTML=`<div style="background:var(--green-soft);border:1px solid var(--green);border-radius:var(--r);padding:8px 14px;font-size:12px;color:var(--green);margin-bottom:12px">&#9989; Capacity OK &#8212; ${util}% utilised (${bdtF(cap.todayDispatchedCFT)} / ${bdtF(cap.dailyCapCFT)} CFT). Pump cycle: ${cap.pumpCycleMin||0} min | Head Cast cycle: ${cap.headCycleMin||0} min</div>`;
+    else cw.innerHTML='';
+  }
 
   if(qs('fleetMini')){
     const trucks=APP.trucks||[],avF=APP.availableTrucksFull||[];
@@ -629,7 +648,7 @@ function renderDashboard() {
   const tbls=APP.liveTables||{};
   const mkTbl=rows=>{
     if(!rows||!rows.length)return'<div style="font-size:12.5px;color:var(--dim);padding:10px 0">No records.</div>';
-    return`<table><thead><tr><th>Truck</th><th>Driver</th><th>Client</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.truck)}</b></td><td>${esc(r.driver)}</td><td>${esc(r.client)}</td><td>${bdtF(r.qty)}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`;
+    return`<table><thead><tr><th>Truck</th><th>Driver</th><th>Client</th><th>Type</th><th>Qty</th><th>Cycle</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.truck)}</b></td><td>${esc(r.driver)}</td><td>${esc(r.client)}</td><td><span class="tg ${r.castingType==='Head Cast'?'tba':r.castingType==='Direct'?'tbl':'tcn'}" style="font-size:10px">${esc(r.castingType||'Pump')}</span></td><td>${bdtF(r.qty)}</td><td>${r.cycle?r.cycle+' m':'—'}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`;
   };
   if(qs('tblIT')) qs('tblIT').innerHTML=mkTbl(tbls.inTransit||[]);
   if(qs('tblW'))  qs('tblW').innerHTML =mkTbl([].concat(tbls.waiting||[],tbls.unloading||[],tbls.returned||[]));
@@ -637,8 +656,8 @@ function renderDashboard() {
   if(qs('dispTbl')){
     const oRows=APP.activeOrders||[];
     qs('dispTbl').innerHTML=oRows.length
-      ?`<table><thead><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips</th><th>Status</th></tr></thead><tbody>${oRows.map(r=>`<tr><td><b style=\"color:var(--gold);font-family:var(--mono)\">${r.orderId}</b></td><td>${esc(r.client)}</td><td>${bdtF(r.totalQty)} CFT</td><td style=\"color:var(--green)\">${bdtF(r.dispatchedQty)}</td><td style=\"color:var(--red);font-weight:700\">${bdtF(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`
-      :'<div style=\"font-size:12.5px;color:var(--dim);padding:10px 0\">No active orders.</div>';
+      ?`<table><thead><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips</th><th>Status</th></tr></thead><tbody>${oRows.map(r=>`<tr><td><b style="color:var(--gold);font-family:var(--mono)">${r.orderId}</b></td><td>${esc(r.client)}</td><td>${bdtF(r.totalQty)} CFT</td><td style="color:var(--green)">${bdtF(r.dispatchedQty)}</td><td style="color:var(--red);font-weight:700">${bdtF(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`
+      :'<div style="font-size:12.5px;color:var(--dim);padding:10px 0">No active orders.</div>';
   }
 
   // Charts
@@ -684,6 +703,7 @@ async function calculateRequirements() {
   btn.disabled = true;
   btn.innerHTML = '<span class="sp"></span> Step 1 of 2: Geocoding address...';
 
+  // STEP 1 — Browser geocodes
   geoBar('loading', 'Locating "' + address + '" on map...');
   const geo = await geocodeBrowser(address);
 
@@ -694,6 +714,7 @@ async function calculateRequirements() {
       btn.disabled=false; btn.innerHTML='&#128506; Step 1: Geocode & Calculate Route';
       return toast('Address not found on map. Please enter a Distance Override or refine the address.', true);
     }
+    // Has override
     geoBar('err', 'Address not found — using Distance Override with approximate map.');
     await proceedWithCoords(23.8103, 90.4125, address, ovr, btn, true);
     return;
@@ -701,6 +722,7 @@ async function calculateRequirements() {
 
   geoBar('ok', `Found: ${geo.display || address} (${geo.lat.toFixed(4)}, ${geo.lon.toFixed(4)})`);
 
+  // STEP 2
   qs('resultSec').style.display = 'block';
   ensureMap();
   showAreaOnMap(geo.lat, geo.lon, address);
@@ -785,13 +807,16 @@ function buildCycleRows() {
   const o=(APP.activeOrders||[]).find(x=>x.orderId===qs('dcOrder').value);
   if(!o) return toast('Select an order first.',true);
   const tOpts='<option value="">&#8212; Truck &#8212;</option>'+(APP.availableTrucks||[]).map(t=>`<option data-cap="${t.cap}" value="${esc(t.no)}">${esc(t.no)} (${t.cap} CFT)</option>`).join('');
-  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+(APP.availableDrivers||[]).map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  const driverList = APP.allDrivers || APP.availableDrivers || [];
+  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+driverList.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  const ctOpts='<option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option>';
   let html='';
   for(let i=0;i<count;i++){
-    html+=`<div class="ar" id="cr_${i}">
+    html+=`<div class="ar" id="cr_${i}" style="grid-template-columns:1.2fr 1.2fr .7fr .8fr">
       <div class="fi"><label>Truck ${i+1}</label><select class="ct" onchange="afc(${i},this)">${tOpts}</select></div>
       <div class="fi"><label>Driver ${i+1}</label><select class="cd">${dOpts}</select></div>
-      <div class="fi"><label>Load (CFT)</label><input type="number" class="cq" placeholder="${Math.min(247,Math.round(o.remainingQty))}" min="1"></div>
+      <div class="fi"><label>Load (CFT)</label><input type="number" class="cq" placeholder="${Math.min(229,Math.round(o.remainingQty))}" min="1"></div>
+      <div class="fi"><label>Casting Type</label><select class="cc">${ctOpts}</select></div>
     </div>`;
   }
   qs('dcRows').innerHTML=html; qs('dcPanel').style.display='block';
@@ -810,8 +835,9 @@ async function submitCycle() {
     const t=document.querySelector(`#cr_${i} .ct`).value;
     const d=document.querySelector(`#cr_${i} .cd`).value;
     const q=Number(document.querySelector(`#cr_${i} .cq`).value);
+    const ct=document.querySelector(`#cr_${i} .cc`)?.value||'Pump';
     if(!t||!d||q<=0) valid=false;
-    assigns.push({truck:t,driver:d,qty:q}); total+=q;
+    assigns.push({truck:t,driver:d,qty:q,castingType:ct}); total+=q;
   }
   if(!valid) return toast('All rows need Truck, Driver, and valid Qty.',true);
   const o=(APP.activeOrders||[]).find(x=>x.orderId===orderId);
@@ -892,7 +918,7 @@ function renderFormLog(rows) {
   const tbl = qs('formLogTable');
   const cnt = qs('formLogCount');
   if (!rows || !rows.length) {
-    tbl.innerHTML = '<div style=\"font-size:13px;color:var(--dim);padding:12px 0\">No form submissions yet.</div>';
+    tbl.innerHTML = '<div style="font-size:13px;color:var(--dim);padding:12px 0">No form submissions yet.</div>';
     if(cnt) cnt.textContent = '0 entries';
     return;
   }
@@ -906,16 +932,16 @@ function renderFormLog(rows) {
     </tr></thead>
     <tbody>
       ${rows.map(r => `<tr>
-        <td style=\"font-family:var(--mono);font-size:11px\">${esc(r.timestamp)}</td>
-        <td><b style=\"color:var(--gold);font-family:var(--mono)\">${esc(r.orderId)}</b></td>
-        <td><b style=\"color:var(--text)\">${esc(r.truck)}</b></td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.timestamp)}</td>
+        <td><b style="color:var(--gold);font-family:var(--mono)">${esc(r.orderId)}</b></td>
+        <td><b style="color:var(--text)">${esc(r.truck)}</b></td>
         <td>${esc(r.evBangla)}</td>
         <td>${stTag2(r.evEnglish)}</td>
-        <td style=\"font-family:var(--mono);font-size:11px\">${esc(r.date)}</td>
-        <td style=\"font-family:var(--mono);font-size:11px\">${esc(r.time)}</td>
-        <td style=\"font-family:var(--mono);font-size:11px\">${esc(r.distance)}</td>
-        <td>${r.status.includes('✅') ? '<span class=\"tg tok\">'+esc(r.status)+'</span>' : r.status.includes('❌') ? '<span class=\"tg tba\">'+esc(r.error||r.status)+'</span>' : '<span class=\"tg tdm\">'+esc(r.status)+'</span>'}</td>
-        <td style=\"font-family:var(--mono);font-size:11px\">${esc(r.matchedRow)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.date)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.time)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.distance)}</td>
+        <td>${r.status.includes('✅') ? '<span class="tg tok">'+esc(r.status)+'</span>' : r.status.includes('❌') ? '<span class="tg tba">'+esc(r.error||r.status)+'</span>' : '<span class="tg tdm">'+esc(r.status)+'</span>'}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.matchedRow)}</td>
       </tr>`).join('')}
     </tbody></table>`;
 }
@@ -923,7 +949,7 @@ function renderFormLog(rows) {
 function stTag2(ev) {
   const map={'Factory Out':'twa','Client Arrival':'tcn','Unloading Start':'tbl','Unloading End':'tok','Factory Return':'tdm'};
   const cls=map[ev]||'tdm';
-  return `<span class=\"tg ${cls}\">${esc(ev)}</span>`;
+  return `<span class="tg ${cls}">${esc(ev)}</span>`;
 }
 
 window.onload = boot;
@@ -935,3 +961,4 @@ window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFo
 </script>
 </body>
 </html>
+}
