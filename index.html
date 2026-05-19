@@ -412,7 +412,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             </div>
             <div style="font-size:13px;line-height:1.7;color:var(--sub)">
               <b style="color:var(--gold)">How it works:</b><br>
-              Driver submits Bangla form &#8594; Response saved to sheet &#8594; GAS trigger auto-processes &#8594; Centralized Data updated &#8594; Dashboard refreshes
+              Driver submits Bangla form (Event + Casting Type) &#8594; Response saved to Form_Responses &#8594; GAS trigger auto-processes &#8594; Casting Type mapped Bangla&#8594;English &#8594; Centralized Data col J updated &#8594; SMV target set per trip type &#8594; Dashboard refreshes
               <br><br>
               <b style="color:var(--gold)">Trigger:</b> Must set <code style="background:var(--ink3);padding:1px 5px;border-radius:3px">onFormSubmit</code> as a Form Submit trigger in Apps Script.
             </div>
@@ -461,7 +461,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbx0dHDW93qSaJ2hQ9GynHo1ZJkjXxtPZdMX2uz51r0yQlaU7zyWRDmEvy8liomscLnmUg/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycby4Sm2MAyv7pfcBqgJFSH5sJAtlRIBlHLQKbsGuiGz2pkwhMxphXzq8haJo1yiwEzr4/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -925,26 +925,34 @@ function renderFormLog(rows) {
   if(cnt) cnt.textContent = rows.length + ' entries';
   tbl.innerHTML = `<table>
     <thead><tr>
-      <th>সময় (Time)</th><th>অর্ডার (Order ID)</th><th>ট্রাক (Truck)</th>
-      <th>ইভেন্ট বাংলা</th><th>Event (English)</th>
-      <th>তারিখ</th><th>সময়</th><th>দূরত্ব (km)</th>
-      <th>Status</th><th>Row</th>
+      <th>সময় (Time)</th><th>অর্ডার</th><th>ট্রাক</th>
+      <th>ইভেন্ট বাংলা</th><th>Event (En)</th>
+      <th>তারিখ</th><th>সময়</th><th>কাস্টিং ধরন</th>
+      <th>দূরত্ব</th><th>Status</th><th>Row</th>
     </tr></thead>
     <tbody>
       ${rows.map(r => `<tr>
         <td style="font-family:var(--mono);font-size:11px">${esc(r.timestamp)}</td>
         <td><b style="color:var(--gold);font-family:var(--mono)">${esc(r.orderId)}</b></td>
-        <td><b style="color:var(--text)">${esc(r.truck)}</b></td>
-        <td>${esc(r.evBangla)}</td>
+        <td><b>${esc(r.truck)}</b></td>
+        <td style="font-size:11px">${esc(r.evBangla)}</td>
         <td>${stTag2(r.evEnglish)}</td>
         <td style="font-family:var(--mono);font-size:11px">${esc(r.date)}</td>
         <td style="font-family:var(--mono);font-size:11px">${esc(r.time)}</td>
-        <td style="font-family:var(--mono);font-size:11px">${esc(r.distance)}</td>
+        <td>${r.castingType ? castingBadge(r.castingType) : '<span class="tg tdm">—</span>'}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(r.distance)||'—'}</td>
         <td>${r.status.includes('✅') ? '<span class="tg tok">'+esc(r.status)+'</span>' : r.status.includes('❌') ? '<span class="tg tba">'+esc(r.error||r.status)+'</span>' : '<span class="tg tdm">'+esc(r.status)+'</span>'}</td>
         <td style="font-family:var(--mono);font-size:11px">${esc(r.matchedRow)}</td>
       </tr>`).join('')}
     </tbody></table>`;
 }
+
+function castingBadge(ct) {
+  if(ct==='Head Cast') return '<span class="tg tba" style="font-size:10px">&#127959; Head Cast</span>';
+  if(ct==='Direct')    return '<span class="tg tbl" style="font-size:10px">&#128200; Direct</span>';
+  return '<span class="tg tcn" style="font-size:10px">&#128667; Pump</span>';
+}
+
 
 function stTag2(ev) {
   const map={'Factory Out':'twa','Client Arrival':'tcn','Unloading Start':'tbl','Unloading End':'tok','Factory Return':'tdm'};
@@ -957,7 +965,7 @@ window.showTab=showTab; window.toggleSb=toggleSb;
 window.calculateRequirements=calculateRequirements; window.saveMasterOrder=saveMasterOrder;
 window.buildCycleRows=buildCycleRows; window.afc=afc; window.submitCycle=submitCycle;
 window.submitOps=submitOps; window.saveCfg=saveCfg; window.boot=boot;
-window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFormLog=refreshFormLog;
+window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFormLog=refreshFormLog; window.castingBadge=castingBadge;
 </script>
 </body>
 </html>
