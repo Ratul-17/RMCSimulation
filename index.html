@@ -238,6 +238,10 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 .seq-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .4s}
 /* ── DRIVER REST BADGE ────────────────────────── */
 .rest-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;background:rgba(240,96,96,.12);color:var(--red);font-family:var(--mono)}
+/* ── DISPATCH SIM TABLE ───────────────────────── */
+#simTable thead th{font-size:9.5px;padding:8px 9px}
+#simTable tbody td{padding:7px 9px;font-size:11.5px}
+@media(max-width:820px){#simTable thead th:nth-child(n+7),#simTable tbody td:nth-child(n+7){display:none}}
 /* ── MAY 18 SIMULATION ────────────────────────── */
 .sim-header{background:linear-gradient(135deg,var(--ink2),var(--ink3));border:1px solid var(--edge2);border-radius:var(--rL);padding:18px 20px;margin-bottom:14px}
 .sim-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
@@ -337,7 +341,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
       <button class="nb" onclick="showTab('sim18',this)"><span class="ni">&#127991;</span>May 18 Simulation</button>
       <button class="nb" onclick="showTab('cfg',this)"><span class="ni">&#9881;</span>Cost Model</button>
     </div>
-    <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.0<br>Dhour Plant, Dhaka, Bangladesh</p></div>
+    <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.1<br>Dhour Plant, Dhaka, Bangladesh</p></div>
   </nav>
 
   <main class="main" id="mainEl">
@@ -395,6 +399,8 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <div class="fi"><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
               <div class="fi"><label>Target Date</label><input id="ocDate" type="date"></div>
               <div class="fi"><label>Target Time</label><input id="ocTime" type="time"></div>
+              <div class="fi"><label>Casting Type</label><select id="ocCastType"><option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option></select></div>
+              <div class="fi"><label>Casting Start Time (UL Start Anchor) <span style="color:var(--cyan);font-weight:400;text-transform:none">— truck 1 UL start</span></label><input id="ocCastTime" type="time" placeholder="e.g. 09:00"></div>
               <div class="fi"><label>Distance Override (km) &mdash; optional</label><input id="ocOvr" type="number" placeholder="Leave blank for auto"></div>
               <div class="fi s3"><label>Notes</label><input id="ocNotes" type="text" placeholder="Special instructions..."></div>
             </div>
@@ -424,13 +430,53 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
                 <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px">Cost Breakdown</div>
                 <div id="costRows"></div>
               </div>
-              <div id="truckSeqSection" style="margin-top:14px;display:none">
-                <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">&#128260; Suggested Truck Sequence</div>
-                <div style="font-size:11px;color:var(--dim);margin-bottom:9px">Based on distance & cycle time — first truck should leave by dispatch time shown</div>
-                <div id="truckSeqRows" class="seq-grid"></div>
-                <div style="margin-top:8px;padding:8px 11px;background:var(--cyan-soft);border-radius:var(--r);font-size:11.5px;color:var(--cyan)">
-                  &#128336; Drivers on 1-hour rest after return are excluded from this list automatically.
+              <div id="truckSeqSection" style="margin-top:18px;display:none">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                  <div>
+                    <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em">&#128260; Dispatch Simulation</div>
+                    <div style="font-size:11px;color:var(--dim);margin-top:3px">Truck <b style="color:var(--gold)">k+1</b> arrives exactly as truck <b style="color:var(--gold)">k</b> finishes unloading — zero idle gap at site</div>
+                  </div>
+                  <span id="simCycleBadge" class="tg tcn" style="font-family:var(--mono);font-size:10.5px"></span>
                 </div>
+                <!-- Casting time anchor note -->
+                <div id="simAnchorNote" style="padding:8px 12px;background:var(--gold-soft);border:1px solid rgba(245,166,35,.3);border-radius:var(--r);font-size:11.5px;color:var(--gold);margin-bottom:10px;display:none">
+                  &#8984; Anchor: Truck 1 UL Start (Casting Time) = <b id="simAnchorTime">—</b>
+                </div>
+                <!-- Client Baseline Integration Hook Banner -->
+                <div style="padding:8px 12px;background:var(--cyan-soft);border:1px solid rgba(52,209,192,.25);border-radius:var(--r);font-size:11px;color:var(--cyan);margin-bottom:11px;display:flex;align-items:center;gap:8px">
+                  <span>&#128279;</span>
+                  <span><b>Client Baseline Sheet</b> — not yet connected. Currently using distance-based estimates. Attach baseline sheet (Client Name · Address · Total min · UL time min · Travel time hr · Avg speed · Distance km) to use observed values per client.</span>
+                </div>
+                <!-- Cycle breakdown bar -->
+                <div id="simCycleBar" style="margin-bottom:12px;display:none">
+                  <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Cycle Breakdown (per truck)</div>
+                  <div id="simCycleBarInner" style="display:flex;height:22px;border-radius:5px;overflow:hidden;font-size:9px;gap:1px"></div>
+                  <div id="simCycleLegend" style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap"></div>
+                </div>
+                <!-- Simulation table -->
+                <div class="sim-tbl-wrap" style="max-height:320px">
+                  <table id="simTable">
+                    <thead>
+                      <tr>
+                        <th style="width:28px">#</th>
+                        <th>Truck</th>
+                        <th>Driver</th>
+                        <th style="color:var(--gold)">Factory Out</th>
+                        <th style="color:var(--blue)">Site Arrival</th>
+                        <th style="color:var(--cyan)">UL Start <span style="font-size:8px;opacity:.7">(Casting)</span></th>
+                        <th style="color:var(--green)">UL End</th>
+                        <th style="color:var(--sub)">Factory Return</th>
+                        <th>Qty CFT</th>
+                        <th>Gap</th>
+                      </tr>
+                    </thead>
+                    <tbody id="simTableBody"></tbody>
+                  </table>
+                </div>
+                <div style="margin-top:9px;padding:9px 13px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);font-size:11.5px;color:var(--sub);line-height:1.65">
+                  &#128338; <b style="color:var(--text)">Timestamps are relative to today's date.</b> Negative factory-out times indicate pre-midnight dispatch required — plan accordingly. UL Start = concrete casting start time. Gap = 0 means seamless handoff (next truck arrives as previous finishes).
+                </div>
+                <div style="margin-top:8px;padding:8px 12px;background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.2);border-radius:var(--r);font-size:11px;color:var(--red);display:none" id="simWarning"></div>
               </div>
               <button class="btn bg" onclick="saveMasterOrder()" style="margin-top:14px">&#10003; Step 2: Save Master Order</button>
             </div>
@@ -632,7 +678,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbwtJkLaIBCYN8Te6jnAn0xUD3EIwLvVLbVCphM7tQ_iB6HRIaeL2OdwIYaXkiZQvLLAtA/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbzn8iDximXOmFhgl9ogtgyZKACBqxysnObfClqBhg-TV5mMObCMKYDRHHfPo3bMkdOrMg/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -911,11 +957,22 @@ async function calculateRequirements() {
 
 async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed) {
   try {
+    // Parse casting time from input → minutes from midnight
+    let castingTimeMin = null;
+    const ctRaw = qs('ocCastTime') && qs('ocCastTime').value;
+    if (ctRaw) {
+      const [h, m] = ctRaw.split(':').map(Number);
+      castingTimeMin = h * 60 + m;
+    }
+    const castingType = qs('ocCastType') ? qs('ocCastType').value : 'Pump';
+
     const res = await gs('calculateOrderRequirements', {
       qty: qs('ocQty').value,
       overrideKm: ovr,
       pump: qs('ocPump').value,
-      destLat, destLon
+      destLat, destLon,
+      castingTimeMin,
+      castingType
     });
     CALC = res;
 
@@ -940,8 +997,8 @@ async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed)
     qs('costRows').innerHTML = rows.map(([l,k])=>`<div class="cr"><span class="cl">${l}</span><span>BDT ${bdtF(c[k])}</span></div>`).join('')+
       `<div class="cr cr-total"><span>TOTAL COST</span><span>BDT ${bdtF(c.total)} &nbsp;<small style="font-size:11px;opacity:.7">(${bdtF(c.perCft)}/CFT)</small></span></div>`;
 
-    // ── Truck sequence preview ──────────────────────────────────────
-    renderTruckSeqPreview(res);
+    // ── Dispatch simulation ──────────────────────────────────────────
+    renderDispatchSim(res);
     toast('Route calculated successfully!');
   } catch(err) {
     toast(err.message || 'Routing failed.', true);
@@ -1287,40 +1344,108 @@ function stTag2(ev) {
   return `<span class="tg ${cls}">${esc(ev)}</span>`;
 }
 
-// ── Truck Sequence Preview ───────────────────────────────────────────
-function renderTruckSeqPreview(res) {
-  const sec = qs('truckSeqSection');
-  const box = qs('truckSeqRows');
-  if(!sec || !box) return;
-  const seq = res.truckSeq || [];
-  if(!seq.length){ sec.style.display='none'; return; }
-  sec.style.display='block';
-  const cycleMin = res.distBasedCycleMin || 238;
+// ── Dispatch Simulation Renderer ────────────────────────────────────────
+function fmt24sim(minFromMidnight) {
+  const m = ((Math.round(minFromMidnight) % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60), mn = m % 60;
+  const ap = h >= 12 ? 'PM' : 'AM';
+  const hh = h % 12 || 12;
+  return `${hh}:${String(mn).padStart(2,'0')} ${ap}`;
+}
+
+function isBelowMidnight(minFromMidnight) {
+  return Math.round(minFromMidnight) < 0;
+}
+
+function renderDispatchSim(res) {
+  const sec  = qs('truckSeqSection');
+  const tbody= qs('simTableBody');
+  if (!sec || !tbody) return;
+
+  const sim  = res.dispatchSim || [];
+  if (!sim.length) { sec.style.display = 'none'; return; }
+
+  sec.style.display = 'block';
+
+  // ── Cycle badge ─────────────────────────────────────────────────────
+  const cb = res.cycleBreakdown || {};
+  if (qs('simCycleBadge')) qs('simCycleBadge').textContent = `Cycle: ${cb.totalMin || res.distBasedCycleMin || '—'} min`;
+
+  // ── Anchor time note ─────────────────────────────────────────────────
+  const anchorNote = qs('simAnchorNote');
+  const anchorTime = qs('simAnchorTime');
+  if (anchorNote && anchorTime && res.anchorULStartMin != null) {
+    anchorNote.style.display = 'flex';
+    anchorTime.textContent   = fmt24sim(res.anchorULStartMin);
+  }
+
+  // ── Cycle breakdown bar ──────────────────────────────────────────────
+  const cycleBarWrap = qs('simCycleBar');
+  const cycleBarInner= qs('simCycleBarInner');
+  const cycleLegend  = qs('simCycleLegend');
+  if (cycleBarWrap && cb.totalMin) {
+    cycleBarWrap.style.display = 'block';
+    const total = cb.totalMin;
+    const segs = [
+      { label:'Load',    min: cb.loadMin,   color:'var(--gold)' },
+      { label:'Travel',  min: cb.travelMin, color:'var(--blue)' },
+      { label:'Wait',    min: cb.waitMin,   color:'var(--sub)'  },
+      { label:'UL',      min: cb.ulMin,     color:'var(--cyan)' },
+      { label:'Return',  min: cb.returnMin, color:'var(--green)'},
+    ];
+    cycleBarInner.innerHTML = segs.map(s => {
+      const pct = Math.round(s.min / total * 100);
+      return `<div style="width:${pct}%;background:${s.color};display:flex;align-items:center;justify-content:center;color:#0a0e1a;font-weight:700;min-width:18px;opacity:.85" title="${s.label}: ${s.min} min">${s.min}m</div>`;
+    }).join('');
+    cycleLegend.innerHTML = segs.map(s =>
+      `<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--sub)"><span style="width:10px;height:10px;border-radius:2px;background:${s.color};display:inline-block"></span>${s.label} ${s.min}m</div>`
+    ).join('');
+  }
+
+  // ── Available truck/driver sets for colour-coding ──────────────────
+  const availTrkSet = new Set((APP.availableTrucks||[]).map(t => String(t.no).trim()));
+  const availDrvSet = new Set((APP.availableDrivers||[]).map(d => String(d).trim()));
   const ri = APP.driverRestInfo || {};
-  const availDrvSet = new Set((APP.availableDrivers||[]).map(d=>String(d).trim()));
-  const availTrkSet = new Set((APP.availableTrucks||[]).map(t=>String(t.no).trim()));
-  box.innerHTML = seq.map((s,i) => {
-    const isTrkAvail = availTrkSet.has(String(s.truckNo).trim());
-    const isDrvAvail = availDrvSet.has(String(s.suggestedDriver).trim());
-    const drvRest    = ri[String(s.suggestedDriver).trim()];
-    const statusCls  = isTrkAvail && isDrvAvail ? 'tok' : 'twa';
-    const nowStr     = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    const depMin     = s.dispatchOffset || 0;
-    const depTime    = new Date(Date.now() + depMin*60000).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    const pct        = Math.min(100, Math.round(s.cycleMin/300*100));
-    return `<div class="seq-row">
-      <div class="seq-num">${s.sequence}</div>
-      <div>
-        <div class="seq-trk">${esc(s.truckNo)} <span class="tg ${statusCls}" style="font-size:9px;padding:1px 5px">${isTrkAvail?'Available':'Busy'}</span></div>
-        <div class="seq-bar"><div class="seq-bar-fill" style="width:${pct}%"></div></div>
-      </div>
-      <div class="seq-drv">
-        ${esc(s.suggestedDriver)} 
-        ${drvRest?`<span class="rest-badge">&#128564; ${drvRest.minLeft}m rest</span>`:(isDrvAvail?'<span style="font-size:10px;color:var(--green)">&#9679; Ready</span>':'<span style="font-size:10px;color:var(--red)">&#9679; Busy</span>')}
-      </div>
-      <div class="seq-time">&#128336; Dispatch +${depMin}m<br><span style="font-size:10px;color:var(--dim)">${s.travelToSite}m travel</span></div>
-      <div class="seq-cycle">${s.cycleMin}m cycle<br><span style="color:var(--dim)">${s.capacity} CFT</span></div>
-    </div>`;
+
+  // ── Warnings ──────────────────────────────────────────────────────
+  const simWarnEl = qs('simWarning');
+  const warnings  = [];
+  sim.forEach((s, i) => {
+    if (isBelowMidnight(s.factoryOutMin)) warnings.push(`Truck ${i+1} (${esc(s.truckNo)}) requires pre-midnight dispatch: ${fmt24sim(s.factoryOutMin)}`);
+  });
+  if (simWarnEl) {
+    if (warnings.length) { simWarnEl.style.display='block'; simWarnEl.innerHTML='&#9888; ' + warnings.join('<br>&#9888; '); }
+    else simWarnEl.style.display = 'none';
+  }
+
+  // ── Table rows ────────────────────────────────────────────────────
+  tbody.innerHTML = sim.map((s, i) => {
+    const isTrkAvail = s.truckNo !== '—' && availTrkSet.has(String(s.truckNo).trim());
+    const isDrvAvail = s.driver  !== '—' && availDrvSet.has(String(s.driver).trim());
+    const drvRest    = ri[String(s.driver||'').trim()];
+    const trkCls     = isTrkAvail ? 'tok' : (s.truckNo==='—' ? 'tdm' : 'twa');
+    const drvCls     = isDrvAvail ? 'tok' : (s.driver==='—'  ? 'tdm' : (drvRest ? 'tba' : 'twa'));
+    const isFONeg    = isBelowMidnight(s.factoryOutMin);
+    const isAnchor   = i === 0;
+    const rowStyle   = isAnchor ? 'background:rgba(245,166,35,.04);' : s.isPartial ? 'background:rgba(96,165,250,.04);' : '';
+    const gapStyle   = 'color:var(--green);font-weight:700';
+
+    const drvLabel = drvRest
+      ? `${esc(s.driver)} <span class="rest-badge">&#128564; ${drvRest.minLeft}m rest</span>`
+      : `${esc(s.driver)} <span class="tg ${drvCls}" style="font-size:9px;padding:1px 5px;margin-left:2px">${isDrvAvail?'Ready':'Busy'}</span>`;
+
+    return `<tr style="${rowStyle}">
+      <td style="font-family:var(--mono);color:${isAnchor?'var(--gold)':'var(--sub)'};font-weight:${isAnchor?'700':'400'}">${s.trip}</td>
+      <td><span class="tg ${trkCls}" style="font-family:var(--mono);font-size:10px">${esc(s.truckNo)}</span></td>
+      <td style="font-size:11.5px">${drvLabel}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:${isFONeg?'var(--red)':'var(--gold)'}" title="Gate-out from plant">${fmt24sim(s.factoryOutMin)}${isFONeg?' &#9888;':''}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--blue)">${fmt24sim(s.arrivalMin)}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--cyan);font-weight:${isAnchor?'700':'400'}">${fmt24sim(s.ulStartMin)}${isAnchor?' &#8984;':''}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--green)">${fmt24sim(s.ulEndMin)}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--sub)">${fmt24sim(s.factoryReturnMin)}</td>
+      <td style="font-family:var(--mono);font-size:12px${s.isPartial?';color:var(--blue)':''}">${bdtF(s.tripQty)}${s.isPartial?' <span style="font-size:9px;color:var(--blue)">(partial)</span>':''}</td>
+      <td style="${gapStyle};font-family:var(--mono);font-size:11px">${i===0?'—':'0m &#10003;'}</td>
+    </tr>`;
   }).join('');
 }
 
@@ -1779,7 +1904,7 @@ window.calculateRequirements=calculateRequirements; window.saveMasterOrder=saveM
 window.buildCycleRows=buildCycleRows; window.afc=afc; window.submitCycle=submitCycle;
 window.submitOps=submitOps; window.saveCfg=saveCfg; window.boot=boot;
 window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFormLog=refreshFormLog; window.castingBadge=castingBadge; window.toggleTheme=toggleTheme;
-window.loadSim18=loadSim18; window.simTab=simTab; window.tsSubTab=tsSubTab; window.renderTruckSeqPreview=renderTruckSeqPreview;
+window.loadSim18=loadSim18; window.simTab=simTab; window.tsSubTab=tsSubTab; window.renderDispatchSim=renderDispatchSim;
 window.openCapacitySection=openCapacitySection; window.capacityLogin=capacityLogin; window.capacityLogout=capacityLogout;
 window.requestCapOtp=requestCapOtp; window.resetCapPin=resetCapPin; window.loadCapacityModel=loadCapacityModel;
 window.syncCap=syncCap; window.saveCapAssumptions=saveCapAssumptions;
