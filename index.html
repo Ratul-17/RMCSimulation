@@ -256,6 +256,25 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 .sim-tbl-wrap tbody tr:last-child td{border-bottom:none}
 .sim-tbl-wrap tbody tr:hover td{background:rgba(52,209,192,.03)}
 .validation-box{background:var(--green-soft);border:1px solid rgba(45,212,160,.3);border-radius:var(--r);padding:12px 15px;margin-top:12px}
+/* ── TRUCK SEQUENCING ─────────────────────────────────────────────── */
+.ts-tbl-wrap{overflow:auto;max-height:360px;border:1px solid var(--edge);border-radius:var(--r)}
+.ts-row{display:grid;grid-template-columns:32px 32px 138px 1fr 70px 70px 70px 70px 70px;align-items:center;border-bottom:1px solid var(--edge)}
+.ts-row:last-child{border-bottom:none}
+.ts-cell{padding:7px 8px;font-family:var(--mono);font-size:11px}
+.ts-head{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);background:var(--ink3);padding:7px 8px;position:sticky;top:0;z-index:2}
+.ts-highlight{background:rgba(245,166,35,.06)}
+.ts-partial{background:rgba(96,165,250,.06)}
+.ts-gantt-wrap{overflow-x:auto;margin-top:12px;padding:4px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r)}
+.ts-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.ts-compare-box{background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:13px}
+.ts-cb-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin-bottom:8px}
+.ts-mrow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--edge);font-size:12px}
+.ts-mrow:last-child{border-bottom:none}
+.ts-mrow .mv{font-family:var(--mono);font-weight:600;font-size:13px}
+.gap-good{color:var(--green)}.gap-warn{color:var(--gold)}.gap-bad{color:var(--red)}
+.insight-box{background:var(--cyan-soft);border:1px solid rgba(52,209,192,.25);border-radius:var(--r);padding:11px 14px;font-size:12.5px;color:var(--text);line-height:1.65;margin-top:10px}
+.insight-box b{color:var(--cyan)}
+@media(max-width:960px){.ts-row{grid-template-columns:28px 28px 120px 1fr 60px 60px 60px!important}.ts-compare-grid{grid-template-columns:1fr}}
 /* ── RESPONSIVE ───────────────────────── */
 @media(max-width:1280px){.kg{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:1100px){.kg{grid-template-columns:repeat(4,1fr)}.g2,.g3{grid-template-columns:1fr}.g2e{grid-template-columns:1fr 1fr}}
@@ -613,7 +632,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbxSa0oVlfpkEiOSKuKpacy5el3_NKThUGPbFKdT6_RwPk_plOWDZ43s9CifuAnO1DITHQ/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwtJkLaIBCYN8Te6jnAn0xUD3EIwLvVLbVCphM7tQ_iB6HRIaeL2OdwIYaXkiZQvLLAtA/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -1347,6 +1366,7 @@ function renderSim18(data) {
     <button class="sim-tab on" onclick="simTab('sched')">Casting Schedule</button>
     <button class="sim-tab" onclick="simTab('timeline')">Dispatch Timeline</button>
     <button class="sim-tab" onclick="simTab('validation')">Model Validation</button>
+    <button class="sim-tab" onclick="simTab('truckseq')" style="border-color:rgba(52,209,192,.35);color:var(--cyan)">&#128260; Truck Sequencing — Assure Dev</button>
   </div>
   <div class="sim-panel on" id="simP-sched">
     <div class="sim-tbl-wrap">
@@ -1416,6 +1436,9 @@ function renderSim18(data) {
         <div style="font-size:12px;color:var(--text);line-height:1.7">Each order stores its real distance. SMV targets are <b>distance-adjusted</b> per trip. A 15 km site gets a 127 min target, not 238. NPT only flags genuinely delayed trips.</div>
       </div>
     </div>
+  </div>
+  <div class="sim-panel" id="simP-truckseq">
+    ${buildTruckSeqPanel(data.truckSequencing)}
   </div>`;
 
   content.innerHTML = html;
@@ -1448,9 +1471,290 @@ function buildSimTimelineSvg(cs) {
   return g;
 }
 
+// ── Truck Sequencing Panel Builder ───────────────────────────────────
+function fmt24ts(minFromMidnight) {
+  const m = ((Math.round(minFromMidnight) % 1440) + 1440) % 1440;
+  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+}
+
+function buildTruckSeqPanel(ts) {
+  if (!ts) return '<div style="color:var(--dim);padding:20px">No truck sequencing data available.</div>';
+  const bl = ts.baseline, mo = ts.model, cmp = ts.comparison;
+  const sim = ts.simSeq || [], act = ts.actualSeq || [], gaps = ts.actualGaps || [];
+
+  // ── HEADER + BASELINE ─────────────────────────────────────────────
+  let html = `
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+    <div class="sim-kpi"><div class="sk-l">Client</div><div class="sk-v" style="font-size:14px">${esc(ts.client)}</div><div class="sk-s">${esc(ts.addr)}</div></div>
+    <div class="sim-kpi"><div class="sk-l">Baseline Travel (pivot)</div><div class="sk-v" style="color:var(--cyan)">${bl.avgTravelMin.toFixed(1)} min</div><div class="sk-s">${bl.avgTravelHr} hr avg · ${bl.avgDistKm} km round trip</div></div>
+    <div class="sim-kpi"><div class="sk-l">Model Cycle (15 km)</div><div class="sk-v" style="color:var(--gold)">${mo.cycleMin} min</div><div class="sk-s">Load(${mo.plantLoadMin})+Travel(${mo.travelToSiteMin})+Wait(${mo.waitAtSiteMin})+UL(${mo.ulMin})+Ret(${mo.returnMin})</div></div>
+    <div class="sim-kpi"><div class="sk-l">Trips required</div><div class="sk-v" style="color:var(--text)">${mo.tripsNeeded}</div><div class="sk-s">${mo.totalQtyCft.toLocaleString()} CFT ÷ ${mo.drumsPerTrip} CFT/drum</div></div>
+  </div>
+
+  <div style="background:var(--ink3);border:1px solid rgba(52,209,192,.25);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--text);margin-bottom:14px;line-height:1.65">
+    <b style="color:var(--cyan)">&#128270; Baseline Source:</b> Actual Gate In/Out sheet, 18 May 2026 — Pivot Table analysis. Average total travel time (factory→site + site→factory, excluding UL) = <b style="color:var(--cyan)">1.06 hr (63.6 min)</b> · Avg round-trip distance = <b style="color:var(--cyan)">26.5 km</b>.
+    Model decomposes this as: <b>36 min to site</b> (15 km @ 25 km/h) + <b>26 min return</b> (15 km @ 35 km/h) = <b>62 min travel</b> — within 2.5% of observed baseline. UL window observed: <b>${bl.ulWindowMin} min</b> per truck from Sheet7.
+  </div>
+
+  <div class="sim-tabs" style="margin-bottom:10px">
+    <button class="sim-tab on" onclick="tsSubTab('sim',this)" id="tst-sim">&#9881; Optimized Sim Sequence</button>
+    <button class="sim-tab" onclick="tsSubTab('act',this)" id="tst-act">&#128202; Actual Observed Sequence</button>
+    <button class="sim-tab" onclick="tsSubTab('cmp',this)" id="tst-cmp">&#128270; Actual vs Simulated</button>
+    <button class="sim-tab" onclick="tsSubTab('gantt',this)" id="tst-gantt">&#128336; Gantt Chart</button>
+  </div>
+
+  <div id="tss-sim">`;
+
+  // ── SIMULATED SEQUENCE TABLE ──────────────────────────────────────
+  html += `
+  <div style="font-size:11.5px;color:var(--sub);margin-bottom:8px">
+    &#9881; Optimized model: <b style="color:var(--gold)">13 trucks</b> sequenced so each truck arrives at Assure Dev Sec 3 <b>exactly as the previous truck finishes unloading</b>. 
+    Dispatch interval = ${mo.ulMin} min (= UL time). Zero idle gap at pump. Casting start: <b>07:06</b>.
+  </div>
+  <div class="ts-tbl-wrap">
+    <div style="display:grid;grid-template-columns:32px 32px 138px 1fr 70px 70px 70px 70px 70px 80px;">
+      <div class="ts-head">#</div>
+      <div class="ts-head">Trip</div>
+      <div class="ts-head">Truck No</div>
+      <div class="ts-head">Driver</div>
+      <div class="ts-head">Load Start</div>
+      <div class="ts-head">Gate Out</div>
+      <div class="ts-head">Site Arrival</div>
+      <div class="ts-head">UL Start</div>
+      <div class="ts-head">UL End</div>
+      <div class="ts-head">Plant Return</div>
+    </div>`;
+
+  sim.forEach((r, i) => {
+    const bgcls = r.isPartial ? 'ts-partial' : (i%2===0?'ts-highlight':'');
+    const qtyStr = r.isPartial ? `${r.tripQtyCft} CFT ⚑` : `${r.tripQtyCft} CFT`;
+    const leadStyle = i < sim.length-1 ? `color:var(--green);font-weight:600` : `color:var(--dim)`;
+    html += `
+    <div class="ts-row ${bgcls}" style="grid-template-columns:32px 32px 138px 1fr 70px 70px 70px 70px 70px 80px;">
+      <div class="ts-cell" style="color:var(--sub);font-size:10px">${i+1}</div>
+      <div class="ts-cell" style="color:var(--gold)">${r.trip}</div>
+      <div class="ts-cell" style="color:var(--text);font-size:11px">${esc(r.truckNo)}</div>
+      <div class="ts-cell" style="color:var(--sub);font-size:11px">${esc(r.driver)}</div>
+      <div class="ts-cell" style="color:var(--dim)">${fmt24ts(r.loadStartMin)}</div>
+      <div class="ts-cell" style="color:var(--gold)">${fmt24ts(r.dispatchMin)}</div>
+      <div class="ts-cell" style="color:var(--cyan)">${fmt24ts(r.arrivalAtSite)}</div>
+      <div class="ts-cell" style="color:var(--blue)">${fmt24ts(r.ulStartMin)}</div>
+      <div class="ts-cell" style="color:var(--green)">${fmt24ts(r.ulEndMin)}</div>
+      <div class="ts-cell" style="color:var(--dim)">${fmt24ts(r.returnArrMin)}</div>
+    </div>`;
+  });
+
+  html += `</div>
+  <div style="margin-top:8px;font-size:11.5px;color:var(--dim)">
+    &#9888; Last trip (Trip 13) carries ${sim[sim.length-1]?.tripQtyCft} CFT (partial drum — ${(2909 % 229 || 229)} CFT of 229 CFT capacity used).
+    Total delivered: <b style="color:var(--gold)">${sim.reduce((s,r)=>s+r.tripQtyCft,0).toLocaleString()} CFT</b> = 2909 CFT ordered.
+    &nbsp;|&nbsp; <b>Cycle: ${mo.cycleMin} min</b> &nbsp;|&nbsp; <b>Dispatch interval: ${mo.ulMin} min</b> (= UL time, keeping pump continuously fed)
+  </div>
+  </div>`;
+
+  // ── ACTUAL SEQUENCE TABLE ─────────────────────────────────────────
+  html += `<div id="tss-act" style="display:none">
+  <div style="font-size:11.5px;color:var(--sub);margin-bottom:8px">
+    &#128202; Actual observed on <b>18 May 2026</b> from Actual Gate In/Out register + Sheet7 time study.
+    <b>12 trips</b> served Assure Builders Ltd (Sector 3, Uttara). Trip 10 & 11 show extreme outliers (287/271 min).
+  </div>
+  <div class="ts-tbl-wrap">
+    <div style="display:grid;grid-template-columns:32px 138px 1fr 65px 65px 65px 65px 65px 70px 60px;">
+      <div class="ts-head">#</div>
+      <div class="ts-head">Truck No</div>
+      <div class="ts-head">Driver</div>
+      <div class="ts-head">Gate Out</div>
+      <div class="ts-head">Arrival</div>
+      <div class="ts-head">UL Start</div>
+      <div class="ts-head">UL End</div>
+      <div class="ts-head">Return</div>
+      <div class="ts-head">Total Min</div>
+      <div class="ts-head">Travel</div>
+    </div>`;
+
+  act.forEach((r, i) => {
+    const isOutlier = r.totalMin > 200;
+    const rowStyle = isOutlier ? 'background:rgba(240,96,96,.06)' : (i%2===0?'background:rgba(245,166,35,.04)':'');
+    html += `
+    <div class="ts-row" style="grid-template-columns:32px 138px 1fr 65px 65px 65px 65px 65px 70px 60px;${rowStyle}">
+      <div class="ts-cell" style="color:var(--sub)">${i+1}</div>
+      <div class="ts-cell" style="color:var(--text)">${esc(r.truckNo)}</div>
+      <div class="ts-cell" style="color:var(--sub);font-size:11px">${esc(r.driver)}</div>
+      <div class="ts-cell" style="color:var(--gold)">${r.gateOutHHMM}</div>
+      <div class="ts-cell" style="color:var(--cyan)">${r.arrivalHHMM}</div>
+      <div class="ts-cell" style="color:var(--blue)">${r.ulStartHHMM}</div>
+      <div class="ts-cell" style="color:var(--green)">${r.ulEndHHMM}</div>
+      <div class="ts-cell" style="color:var(--dim)">${r.returnHHMM}</div>
+      <div class="ts-cell" style="color:${isOutlier?'var(--red)':'var(--text)'};font-weight:${isOutlier?700:400}">${r.totalMin} ${isOutlier?'⚠':''}min</div>
+      <div class="ts-cell" style="color:var(--sub)">${r.travelMin}m</div>
+    </div>`;
+  });
+
+  // Show inter-truck gaps
+  html += `</div>
+  <div style="margin-top:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Inter-Truck Gap at Site (UL End → Next Arrival)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;">`;
+  gaps.forEach(g => {
+    const cls = g.gapMin < 0 ? 'gap-bad' : g.gapMin < 10 ? 'gap-good' : g.gapMin < 30 ? 'gap-warn' : 'gap-bad';
+    const label = g.gapMin < 0 ? 'overlap' : g.gapMin === 0 ? 'seamless' : g.gapMin < 10 ? 'tight' : g.gapMin < 30 ? 'gap' : 'long gap';
+    html += `<div style="font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:99px;background:var(--ink3);border:1px solid var(--edge)">T${g.from}→T${g.to}: <b class="${cls}">${g.gapMin>0?'+':''}${g.gapMin}m (${label})</b></div>`;
+  });
+  html += `</div></div></div>`;
+
+  // ── COMPARISON PANEL ─────────────────────────────────────────────
+  html += `<div id="tss-cmp" style="display:none">
+  <div class="ts-compare-grid">
+    <div class="ts-compare-box">
+      <div class="ts-cb-lbl">&#9881; Optimized Simulated (Model)</div>
+      <div class="ts-mrow"><span>Trucks deployed</span><span class="mv" style="color:var(--cyan)">${cmp.simTrucksUsed}</span></div>
+      <div class="ts-mrow"><span>Avg cycle time</span><span class="mv" style="color:var(--cyan)">${cmp.simAvgCycleMin} min</span></div>
+      <div class="ts-mrow"><span>Total casting span</span><span class="mv" style="color:var(--cyan)">${Math.floor(cmp.simTotalSpanMin/60)}h ${cmp.simTotalSpanMin%60}m</span></div>
+      <div class="ts-mrow"><span>Gap at pump (inter-truck)</span><span class="mv gap-good">0 min</span></div>
+      <div class="ts-mrow"><span>Dispatch interval</span><span class="mv" style="color:var(--gold)">${mo.ulMin} min</span></div>
+      <div class="ts-mrow"><span>First truck gate out</span><span class="mv" style="color:var(--gold)">${fmt24ts(sim[0]?.dispatchMin||0)}</span></div>
+      <div class="ts-mrow"><span>Last UL complete</span><span class="mv" style="color:var(--green)">${fmt24ts(sim[sim.length-1]?.ulEndMin||0)}</span></div>
+      <div class="ts-mrow"><span>Outlier trips (&gt;200 min)</span><span class="mv gap-good">0</span></div>
+    </div>
+    <div class="ts-compare-box">
+      <div class="ts-cb-lbl">&#128202; Actual (18 May 2026)</div>
+      <div class="ts-mrow"><span>Trucks deployed</span><span class="mv" style="color:var(--gold)">${cmp.actTrucksUsed}</span></div>
+      <div class="ts-mrow"><span>Avg cycle time</span><span class="mv" style="color:var(--gold)">${cmp.actAvgCycleMin} min</span></div>
+      <div class="ts-mrow"><span>Total casting span</span><span class="mv" style="color:var(--gold)">${Math.floor(cmp.actTotalSpanMin/60)}h ${cmp.actTotalSpanMin%60}m</span></div>
+      <div class="ts-mrow"><span>Max inter-truck gap</span><span class="mv gap-bad">+${cmp.actMaxGapMin} min</span></div>
+      <div class="ts-mrow"><span>Min inter-truck gap</span><span class="mv gap-warn">${cmp.actMinGapMin} min</span></div>
+      <div class="ts-mrow"><span>First truck gate out</span><span class="mv" style="color:var(--gold)">${act[0]?.gateOutHHMM||'—'}</span></div>
+      <div class="ts-mrow"><span>Last UL complete</span><span class="mv" style="color:var(--text)">${act[act.length-1]?.ulEndHHMM||'—'}</span></div>
+      <div class="ts-mrow"><span>Outlier trips (&gt;200 min)</span><span class="mv gap-bad">${cmp.actOutlierTrips}</span></div>
+    </div>
+  </div>
+  <div class="insight-box">
+    <b>&#128270; Why the Model Fits Well:</b><br>
+    (1) <b>Travel baseline matches:</b> Model travel = 36+26 = 62 min vs pivot baseline 63.6 min → <b>2.5% error</b>. The pivot table gives us the actual observed round-trip travel from Actual Gate In/Out — our model decomposition is independently verified.<br>
+    (2) <b>Cycle accuracy:</b> Field observation of SHA 14-0550 on 18 May gave actual cycle = 124 min vs model 127 min → <b>${cmp.modelFitPct}% error</b>.<br>
+    (3) <b>Sequencing constraint enforced:</b> By setting dispatch interval = UL time (${mo.ulMin} min), the next truck arrives at site exactly as the current one finishes, <b>keeping the pump continuously fed</b>. This eliminates the inter-truck idle gaps seen in actual (max gap: ${cmp.actMaxGapMin} min).<br>
+    (4) <b>Trip 10 &amp; 11 outliers (287/271 min):</b> These are NPT events (truck breakdown / extreme traffic). Model flags these via SMV% drop — <b>the system's NPT detection catches exactly these cases</b>.
+  </div>
+  </div>`;
+
+  // ── GANTT SVG ────────────────────────────────────────────────────
+  html += `<div id="tss-gantt" style="display:none">
+  <div style="font-size:11.5px;color:var(--sub);margin-bottom:8px">
+    Gantt chart of simulated (top, cyan) vs actual (bottom, amber) truck schedules at Assure Dev Sec 3. 
+    Green bars = unloading window. Dark bars = transit. Dashed vertical = casting start (07:06).
+  </div>
+  <div class="ts-gantt-wrap">
+    ${buildTruckSeqGantt(sim, act, mo.castingStartMin, bl.ulWindowMin)}
+  </div>
+  </div>`;
+
+  return html;
+}
+
+function buildTruckSeqGantt(sim, act, castStartMin, ulWindowAct) {
+  const W = 740, ML = 108, MR = 12, CW = W - ML - MR;
+  const T0 = 6*60, T1 = 16*60, TR = T1 - T0;
+  const tx = m => ML + ((m - T0) / TR * CW);
+
+  const rowH = 20, pad = 4;
+  const nSim = sim.length, nAct = act.length;
+  const H = (nSim + nAct + 2) * (rowH + pad) + 80;
+
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:580px;display:block">`;
+
+  // Background grid
+  for (let hr = 6; hr <= 16; hr++) {
+    const x = tx(hr * 60);
+    g += `<line x1="${x}" y1="0" x2="${x}" y2="${H-18}" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>`;
+    g += `<text x="${x}" y="${H-4}" text-anchor="middle" font-size="9" fill="#4a5d7a" font-family="monospace">${String(hr).padStart(2,'0')}:00</text>`;
+  }
+
+  // Casting start line
+  const csx = tx(castStartMin);
+  g += `<line x1="${csx}" y1="0" x2="${csx}" y2="${H-18}" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="5 3"/>`;
+  g += `<text x="${csx+3}" y="10" font-size="9" fill="#f5a623" font-family="monospace">Cast 07:06</text>`;
+
+  // Section label: SIM
+  let y = 20;
+  g += `<text x="${ML-4}" y="${y+14}" text-anchor="end" font-size="10" fill="#34d1c0" font-weight="700">SIMULATED</text>`;
+  y += rowH + pad;
+
+  sim.forEach((r, i) => {
+    const lbl = (r.truckNo || '').replace('Dhaka Metro SHA ', '').replace('SHA ','');
+    const xLoad = Math.max(ML, tx(r.loadStartMin));
+    const xOut  = tx(r.dispatchMin);
+    const xArr  = tx(r.arrivalAtSite);
+    const xUlS  = tx(r.ulStartMin);
+    const xUlE  = tx(r.ulEndMin);
+    const xRet  = Math.min(W - MR, tx(r.returnArrMin));
+
+    // Transit bar (gate out → arrival)
+    g += `<rect x="${xOut}" y="${y+2}" width="${Math.max(1,xArr-xOut)}" height="${rowH-4}" rx="2" fill="rgba(52,209,192,0.2)" stroke="#34d1c0" stroke-width="0.5"/>`;
+    // UL bar (ul start → ul end)
+    g += `<rect x="${xUlS}" y="${y+2}" width="${Math.max(1,xUlE-xUlS)}" height="${rowH-4}" rx="2" fill="rgba(45,212,160,0.4)" stroke="#2dd4a0" stroke-width="0.8"/>`;
+    // Return bar
+    g += `<rect x="${xUlE}" y="${y+2}" width="${Math.max(1,xRet-xUlE)}" height="${rowH-4}" rx="2" fill="rgba(52,209,192,0.1)" stroke="#34d1c0" stroke-width="0.3" stroke-dasharray="2 2"/>`;
+    // Label
+    g += `<text x="${ML-4}" y="${y+14}" text-anchor="end" font-size="9" fill="#7e93b5" font-family="monospace">${esc2(lbl)}</text>`;
+    y += rowH + pad;
+  });
+
+  y += pad * 2;
+  g += `<text x="${ML-4}" y="${y+14}" text-anchor="end" font-size="10" fill="#f5a623" font-weight="700">ACTUAL</text>`;
+  y += rowH + pad;
+
+  act.forEach((r, i) => {
+    const lbl = (r.truckNo || '').replace('Dhaka Metro SHA ', '').replace('SHA ','');
+    const parseMin = t => { if(!t) return 0; const p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]); };
+    const xOut  = Math.max(ML, tx(parseMin(r.gateOutHHMM)));
+    const xArr  = tx(parseMin(r.arrivalHHMM));
+    const xUlS  = tx(parseMin(r.ulStartHHMM));
+    const xUlE  = tx(parseMin(r.ulEndHHMM));
+    const xRet  = Math.min(W - MR, tx(parseMin(r.returnHHMM)));
+    const isOut = r.totalMin > 200;
+
+    // Transit
+    g += `<rect x="${xOut}" y="${y+2}" width="${Math.max(1,xArr-xOut)}" height="${rowH-4}" rx="2" fill="rgba(245,166,35,0.2)" stroke="${isOut?'#f06060':'#f5a623'}" stroke-width="0.5"/>`;
+    // UL window
+    g += `<rect x="${xUlS}" y="${y+2}" width="${Math.max(1,xUlE-xUlS)}" height="${rowH-4}" rx="2" fill="${isOut?'rgba(240,96,96,0.35)':'rgba(245,166,35,0.35)'}" stroke="${isOut?'#f06060':'#f5a623'}" stroke-width="0.8"/>`;
+    // Return
+    if (xRet > xUlE) {
+      g += `<rect x="${xUlE}" y="${y+2}" width="${Math.max(1,xRet-xUlE)}" height="${rowH-4}" rx="2" fill="rgba(245,166,35,0.1)" stroke="#f5a623" stroke-width="0.3" stroke-dasharray="2 2"/>`;
+    }
+    g += `<text x="${ML-4}" y="${y+14}" text-anchor="end" font-size="9" fill="${isOut?'#f06060':'#7e93b5'}" font-family="monospace">${esc2(lbl)}</text>`;
+    y += rowH + pad;
+  });
+
+  // Legend
+  y += 8;
+  g += `<rect x="${ML}" y="${y}" width="12" height="8" rx="2" fill="rgba(45,212,160,0.4)" stroke="#2dd4a0" stroke-width="0.8"/>`;
+  g += `<text x="${ML+16}" y="${y+8}" font-size="9" fill="#7e93b5">Sim UL</text>`;
+  g += `<rect x="${ML+65}" y="${y}" width="12" height="8" rx="2" fill="rgba(52,209,192,0.2)" stroke="#34d1c0" stroke-width="0.5"/>`;
+  g += `<text x="${ML+81}" y="${y+8}" font-size="9" fill="#7e93b5">Sim Transit</text>`;
+  g += `<rect x="${ML+160}" y="${y}" width="12" height="8" rx="2" fill="rgba(245,166,35,0.35)" stroke="#f5a623" stroke-width="0.8"/>`;
+  g += `<text x="${ML+176}" y="${y+8}" font-size="9" fill="#7e93b5">Act UL</text>`;
+  g += `<rect x="${ML+218}" y="${y}" width="12" height="8" rx="2" fill="rgba(240,96,96,0.35)" stroke="#f06060" stroke-width="0.8"/>`;
+  g += `<text x="${ML+234}" y="${y+8}" font-size="9" fill="#f06060">Outlier</text>`;
+
+  g += '</svg>';
+  return g;
+}
+
+function esc2(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function tsSubTab(id, btn) {
+  document.querySelectorAll('#simP-truckseq .sim-tab').forEach(t => t.classList.remove('on'));
+  ['tss-sim','tss-act','tss-cmp','tss-gantt'].forEach(p => {
+    const el = document.getElementById(p); if(el) el.style.display='none';
+  });
+  if(btn) btn.classList.add('on');
+  const el = document.getElementById('tss-'+id);
+  if(el) el.style.display='block';
+}
+
 function simTab(id) {
-  document.querySelectorAll('.sim-tab').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.sim-panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sim-tabs > .sim-tab').forEach(t => t.classList.remove('on'));
   event.target.classList.add('on');
   const el = document.getElementById('simP-'+id);
   if(el) el.classList.add('on');
@@ -1475,7 +1779,7 @@ window.calculateRequirements=calculateRequirements; window.saveMasterOrder=saveM
 window.buildCycleRows=buildCycleRows; window.afc=afc; window.submitCycle=submitCycle;
 window.submitOps=submitOps; window.saveCfg=saveCfg; window.boot=boot;
 window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFormLog=refreshFormLog; window.castingBadge=castingBadge; window.toggleTheme=toggleTheme;
-window.loadSim18=loadSim18; window.simTab=simTab; window.renderTruckSeqPreview=renderTruckSeqPreview;
+window.loadSim18=loadSim18; window.simTab=simTab; window.tsSubTab=tsSubTab; window.renderTruckSeqPreview=renderTruckSeqPreview;
 window.openCapacitySection=openCapacitySection; window.capacityLogin=capacityLogin; window.capacityLogout=capacityLogout;
 window.requestCapOtp=requestCapOtp; window.resetCapPin=resetCapPin; window.loadCapacityModel=loadCapacityModel;
 window.syncCap=syncCap; window.saveCapAssumptions=saveCapAssumptions;
