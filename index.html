@@ -678,7 +678,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbzn8iDximXOmFhgl9ogtgyZKACBqxysnObfClqBhg-TV5mMObCMKYDRHHfPo3bMkdOrMg/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwwXC1BzXkRnXMYejYRkHjHlrUA6y3SkzZrC68HMjEmz6AlYwuYe9--p2lVaFeiEeLsKw/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -711,12 +711,27 @@ function stTag(s) {
 // API TO GAS
 // ─────────────────────────────────────────────────────────────
 function gs(fn, args) {
-  return new Promise((ok,err) => {
-    const tid=setTimeout(()=>err(new Error('Timed out (40s). Google may be slow.')), 40000);
-    fetch(API, {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({fn,args})})
-      .then(r=>{ clearTimeout(tid); return r.json(); })
-      .then(j=>{ if(j.status==='success') ok(j.data); else err(new Error(j.message||'Server error')); })
-      .catch(e=>{ clearTimeout(tid); err(e); });
+  return new Promise((ok, fail) => {
+    const tid = setTimeout(() => fail(new Error('Timed out (40s). Google may be slow.')), 40000);
+    fetch(API, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn, args })
+    })
+    .then(r => { clearTimeout(tid); return r.text(); })
+    .then(text => {
+      // Guard: GAS sometimes returns plain-text on redirect or misconfiguration
+      if (!text || text.trim().charAt(0) !== '{') {
+        // If it's the health-check string, the URL is wrong or hit as GET
+        if (text.includes('ARMCL-01 API OK')) throw new Error('API URL is being hit as GET, not POST. Re-deploy as Web App (New Deployment) and update API URL.');
+        throw new Error('Server returned non-JSON: ' + text.slice(0, 80));
+      }
+      const j = JSON.parse(text);
+      if (j.status === 'success') ok(j.data);
+      else fail(new Error(j.message || 'Server error'));
+    })
+    .catch(e => { clearTimeout(tid); fail(e); });
   });
 }
 
