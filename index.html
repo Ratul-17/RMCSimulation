@@ -226,6 +226,36 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 .capnote{background:var(--cyan-soft);border:1px solid rgba(52,209,192,.25);border-radius:var(--r);padding:10px 13px;font-size:12.5px;color:var(--sub);line-height:1.6}
 @media(max-width:1100px){.capgrid{grid-template-columns:1fr}.sliderrow{grid-template-columns:1fr}.sliderrow input[type=number]{max-width:140px}}
 
+/* ── TRUCK SEQUENCE PREVIEW ──────────────────── */
+.seq-grid{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.seq-row{display:grid;grid-template-columns:32px 1fr 1fr 90px 80px;gap:9px;align-items:center;padding:9px 12px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r)}
+.seq-num{width:26px;height:26px;border-radius:50%;background:var(--gold-soft);color:var(--gold);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--mono);flex-shrink:0}
+.seq-trk{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text)}
+.seq-drv{font-size:12px;color:var(--sub)}
+.seq-time{font-family:var(--mono);font-size:11px;color:var(--cyan)}
+.seq-cycle{font-size:11px;color:var(--dim);text-align:right}
+.seq-bar{height:3px;background:var(--edge);border-radius:2px;margin-top:4px;overflow:hidden}
+.seq-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .4s}
+/* ── DRIVER REST BADGE ────────────────────────── */
+.rest-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;background:rgba(240,96,96,.12);color:var(--red);font-family:var(--mono)}
+/* ── MAY 18 SIMULATION ────────────────────────── */
+.sim-header{background:linear-gradient(135deg,var(--ink2),var(--ink3));border:1px solid var(--edge2);border-radius:var(--rL);padding:18px 20px;margin-bottom:14px}
+.sim-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.sim-kpi{background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:11px 13px}
+.sim-kpi .sk-l{font-size:9.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.sim-kpi .sk-v{font-family:var(--mono);font-size:22px;font-weight:500;margin-top:5px}
+.sim-kpi .sk-s{font-size:10px;color:var(--dim);margin-top:2px}
+.sim-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.sim-tab{padding:5px 13px;border-radius:var(--r);border:1px solid var(--edge);font-size:12.5px;cursor:pointer;background:transparent;color:var(--sub);transition:all .15s;font-family:var(--font)}
+.sim-tab.on{background:var(--gold-soft);color:var(--gold);border-color:rgba(245,166,35,.3);font-weight:600}
+.sim-panel{display:none}.sim-panel.on{display:block}
+.sim-tbl-wrap{overflow:auto;max-height:370px;border:1px solid var(--edge);border-radius:var(--r)}
+.sim-tbl-wrap table{width:100%;border-collapse:collapse}
+.sim-tbl-wrap thead th{background:var(--ink3);color:var(--sub);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;text-align:left;position:sticky;top:0;border-bottom:1px solid var(--edge)}
+.sim-tbl-wrap tbody td{padding:8px 10px;border-bottom:1px solid var(--edge);font-size:12px}
+.sim-tbl-wrap tbody tr:last-child td{border-bottom:none}
+.sim-tbl-wrap tbody tr:hover td{background:rgba(52,209,192,.03)}
+.validation-box{background:var(--green-soft);border:1px solid rgba(45,212,160,.3);border-radius:var(--r);padding:12px 15px;margin-top:12px}
 /* ── RESPONSIVE ───────────────────────── */
 @media(max-width:1280px){.kg{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:1100px){.kg{grid-template-columns:repeat(4,1fr)}.g2,.g3{grid-template-columns:1fr}.g2e{grid-template-columns:1fr 1fr}}
@@ -285,6 +315,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
     <div class="sb-sec">
       <div class="sb-lbl">System</div>
       <button class="nb" onclick="showTab('capacity',this)"><span class="ni">&#128200;</span>Capacity Simulator</button>
+      <button class="nb" onclick="showTab('sim18',this)"><span class="ni">&#127991;</span>May 18 Simulation</button>
       <button class="nb" onclick="showTab('cfg',this)"><span class="ni">&#9881;</span>Cost Model</button>
     </div>
     <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.0<br>Dhour Plant, Dhaka, Bangladesh</p></div>
@@ -373,6 +404,14 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <div style="margin-top:14px">
                 <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px">Cost Breakdown</div>
                 <div id="costRows"></div>
+              </div>
+              <div id="truckSeqSection" style="margin-top:14px;display:none">
+                <div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">&#128260; Suggested Truck Sequence</div>
+                <div style="font-size:11px;color:var(--dim);margin-bottom:9px">Based on distance & cycle time — first truck should leave by dispatch time shown</div>
+                <div id="truckSeqRows" class="seq-grid"></div>
+                <div style="margin-top:8px;padding:8px 11px;background:var(--cyan-soft);border-radius:var(--r);font-size:11.5px;color:var(--cyan)">
+                  &#128336; Drivers on 1-hour rest after return are excluded from this list automatically.
+                </div>
               </div>
               <button class="btn bg" onclick="saveMasterOrder()" style="margin-top:14px">&#10003; Step 2: Save Master Order</button>
             </div>
@@ -530,6 +569,16 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
+      <div id="sim18" class="sec">
+        <div class="ph">
+          <div><div class="pt">May 18 Simulation</div><div class="ps">Real casting plan vs system model — demonstrate accuracy to management</div></div>
+          <button class="rbtn" onclick="loadSim18()">&#8635; Reload</button>
+        </div>
+        <div id="sim18Content">
+          <div style="color:var(--sub);font-size:13px;padding:30px 0;text-align:center">Click Reload to load the May 18 casting simulation.</div>
+        </div>
+      </div>
+
       <div id="cfg" class="sec">
         <div class="ph"><div><div class="pt">Cost Model Settings</div><div class="ps">Configure plant parameters and BDT cost factors</div></div></div>
         <div class="pn">
@@ -564,7 +613,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbzXnidC9d5M82JnrxwUPTHuXZE0-ty5Cn6BpMb_inxq3dClhuFRYAzECenZ6d-82Uz7Xw/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbxSa0oVlfpkEiOSKuKpacy5el3_NKThUGPbFKdT6_RwPk_plOWDZ43s9CifuAnO1DITHQ/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -686,6 +735,7 @@ function showTab(id, btn) {
   if (window.innerWidth<=820) qs('sb').classList.remove('on');
   if (id==='order' && OMAP) setTimeout(()=>OMAP.invalidateSize(), 200);
   if (id==='formlog') refreshFormLog();
+  if (id==='sim18') loadSim18();
   if (id==='capacity') openCapacitySection();
   qs('mainEl').scrollTo({top:0, behavior:'smooth'});
 }
@@ -752,7 +802,12 @@ function renderDashboard() {
   const tbls=APP.liveTables||{};
   const mkTbl=rows=>{
     if(!rows||!rows.length)return'<div style="font-size:12.5px;color:var(--dim);padding:10px 0">No records.</div>';
-    return`<table><thead><tr><th>Truck</th><th>Driver</th><th>Client</th><th>Type</th><th>Qty</th><th>Cycle</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.truck)}</b></td><td>${esc(r.driver)}</td><td>${esc(r.client)}</td><td><span class="tg ${r.castingType==='Head Cast'?'tba':r.castingType==='Direct'?'tbl':'tcn'}" style="font-size:10px">${esc(r.castingType||'Pump')}</span></td><td>${bdtF(r.qty)}</td><td>${r.cycle?r.cycle+' m':'—'}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`;
+    const ri = APP.driverRestInfo || {};
+    return`<table><thead><tr><th>Truck</th><th>Driver</th><th>Client</th><th>Type</th><th>Qty</th><th>Cycle</th><th>Status</th></tr></thead><tbody>${rows.map(r=>{
+      const rest = ri[String(r.driver||'').trim()];
+      const restBadge = rest ? `<span class="rest-badge" title="Rest until ${new Date(rest.restUntil).toLocaleTimeString()}">&#128564; ${rest.minLeft}m rest</span>` : '';
+      return `<tr><td><b>${esc(r.truck)}</b></td><td>${esc(r.driver)} ${restBadge}</td><td>${esc(r.client)}</td><td><span class="tg ${r.castingType==='Head Cast'?'tba':r.castingType==='Direct'?'tbl':'tcn'}" style="font-size:10px">${esc(r.castingType||'Pump')}</span></td><td>${bdtF(r.qty)}</td><td>${r.cycle?r.cycle+' m':'—'}</td><td>${stTag(r.status)}</td></tr>`;
+    }).join('')}</tbody></table>`;
   };
   if(qs('tblIT')) qs('tblIT').innerHTML=mkTbl(tbls.inTransit||[]);
   if(qs('tblW'))  qs('tblW').innerHTML =mkTbl([].concat(tbls.waiting||[],tbls.unloading||[],tbls.returned||[]));
@@ -866,6 +921,8 @@ async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed)
     qs('costRows').innerHTML = rows.map(([l,k])=>`<div class="cr"><span class="cl">${l}</span><span>BDT ${bdtF(c[k])}</span></div>`).join('')+
       `<div class="cr cr-total"><span>TOTAL COST</span><span>BDT ${bdtF(c.total)} &nbsp;<small style="font-size:11px;opacity:.7">(${bdtF(c.perCft)}/CFT)</small></span></div>`;
 
+    // ── Truck sequence preview ──────────────────────────────────────
+    renderTruckSeqPreview(res);
     toast('Route calculated successfully!');
   } catch(err) {
     toast(err.message || 'Routing failed.', true);
@@ -912,7 +969,15 @@ function buildCycleRows() {
   if(!o) return toast('Select an order first.',true);
   const tOpts='<option value="">&#8212; Truck &#8212;</option>'+(APP.availableTrucks||[]).map(t=>`<option data-cap="${t.cap}" value="${esc(t.no)}">${esc(t.no)} (${t.cap} CFT)</option>`).join('');
   const driverList = APP.allDrivers || APP.availableDrivers || [];
-  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+driverList.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  const ri2 = APP.driverRestInfo || {};
+  const availDrvSet = new Set((APP.availableDrivers||[]).map(d=>String(d).trim()));
+  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+driverList.map(d=>{
+    const rest = ri2[String(d).trim()];
+    const avail = availDrvSet.has(String(d).trim());
+    if(rest) return `<option value="${esc(d)}" disabled style="color:#888">${esc(d)} (rest ${rest.minLeft}m)</option>`;
+    if(!avail) return `<option value="${esc(d)}" disabled style="color:#888">${esc(d)} (busy)</option>`;
+    return `<option value="${esc(d)}">${esc(d)}</option>`;
+  }).join('');
   const ctOpts='<option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option>';
   let html='';
   for(let i=0;i<count;i++){
@@ -1203,6 +1268,195 @@ function stTag2(ev) {
   return `<span class="tg ${cls}">${esc(ev)}</span>`;
 }
 
+// ── Truck Sequence Preview ───────────────────────────────────────────
+function renderTruckSeqPreview(res) {
+  const sec = qs('truckSeqSection');
+  const box = qs('truckSeqRows');
+  if(!sec || !box) return;
+  const seq = res.truckSeq || [];
+  if(!seq.length){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  const cycleMin = res.distBasedCycleMin || 238;
+  const ri = APP.driverRestInfo || {};
+  const availDrvSet = new Set((APP.availableDrivers||[]).map(d=>String(d).trim()));
+  const availTrkSet = new Set((APP.availableTrucks||[]).map(t=>String(t.no).trim()));
+  box.innerHTML = seq.map((s,i) => {
+    const isTrkAvail = availTrkSet.has(String(s.truckNo).trim());
+    const isDrvAvail = availDrvSet.has(String(s.suggestedDriver).trim());
+    const drvRest    = ri[String(s.suggestedDriver).trim()];
+    const statusCls  = isTrkAvail && isDrvAvail ? 'tok' : 'twa';
+    const nowStr     = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const depMin     = s.dispatchOffset || 0;
+    const depTime    = new Date(Date.now() + depMin*60000).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const pct        = Math.min(100, Math.round(s.cycleMin/300*100));
+    return `<div class="seq-row">
+      <div class="seq-num">${s.sequence}</div>
+      <div>
+        <div class="seq-trk">${esc(s.truckNo)} <span class="tg ${statusCls}" style="font-size:9px;padding:1px 5px">${isTrkAvail?'Available':'Busy'}</span></div>
+        <div class="seq-bar"><div class="seq-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="seq-drv">
+        ${esc(s.suggestedDriver)} 
+        ${drvRest?`<span class="rest-badge">&#128564; ${drvRest.minLeft}m rest</span>`:(isDrvAvail?'<span style="font-size:10px;color:var(--green)">&#9679; Ready</span>':'<span style="font-size:10px;color:var(--red)">&#9679; Busy</span>')}
+      </div>
+      <div class="seq-time">&#128336; Dispatch +${depMin}m<br><span style="font-size:10px;color:var(--dim)">${s.travelToSite}m travel</span></div>
+      <div class="seq-cycle">${s.cycleMin}m cycle<br><span style="color:var(--dim)">${s.capacity} CFT</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ── May 18 Simulation ─────────────────────────────────────────────────
+async function loadSim18() {
+  const content = qs('sim18Content');
+  if(!content) return;
+  content.innerHTML = '<div style="color:var(--sub);font-size:13px;padding:20px 0;text-align:center"><span class="sp"></span> Loading simulation...</div>';
+  try {
+    const res = await gs('getMay18Simulation', {});
+    renderSim18(res);
+  } catch(err) {
+    content.innerHTML = `<div style="color:var(--red);padding:12px">${esc(err.message)}</div>`;
+  }
+}
+
+function fmt24(min) {
+  min = ((min % 1440) + 1440) % 1440;
+  return String(Math.floor(min/60)%24).padStart(2,'0') + ':' + String(Math.floor(min%60)).padStart(2,'0');
+}
+
+function renderSim18(data) {
+  const s = data.summary, cs = data.castings;
+  const content = qs('sim18Content');
+  const demandColor = s.demandRatioPct > 130 ? 'var(--red)' : s.demandRatioPct > 100 ? 'var(--gold)' : 'var(--green)';
+
+  let html = `
+  <div class="sim-header">
+    <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">&#128467; 18 May 2026 — Casting Day Analysis</div>
+    <div style="font-size:12px;color:var(--sub)">Assure Development, Asset Development + 15 other clients | Real lifting plan vs system model</div>
+  </div>
+  <div class="sim-kpi-grid">
+    <div class="sim-kpi"><div class="sk-l">Total demand</div><div class="sk-v">${s.totalQtyCFT.toLocaleString()}</div><div class="sk-s">CFT (${s.totalQtyCUM} CUM)</div></div>
+    <div class="sim-kpi"><div class="sk-l">Total trips</div><div class="sk-v" style="color:var(--gold)">${s.totalTrips}</div><div class="sk-s">at ${s.drumCft} CFT/drum</div></div>
+    <div class="sim-kpi"><div class="sk-l">Fleet capacity</div><div class="sk-v" style="color:var(--red)">${s.fleetCapCFT.toLocaleString()}</div><div class="sk-s">CFT / 12h shift (${s.activeTMs} TMs)</div></div>
+    <div class="sim-kpi"><div class="sk-l">Demand ratio</div><div class="sk-v" style="color:${demandColor}">${s.demandRatioPct}%</div><div class="sk-s">${s.trucksMins} TMs needed (full day)</div></div>
+    <div class="sim-kpi"><div class="sk-l">Morning peak (07-09h)</div><div class="sk-v" style="color:var(--gold)">${s.morningPeakTrips}</div><div class="sk-s">trips, ${s.morningPeakCastings} castings</div></div>
+  </div>
+  <div style="padding:10px 14px;background:var(--gold-soft);border:1px solid rgba(245,166,35,.3);border-radius:var(--r);font-size:12.5px;color:var(--gold);margin-bottom:14px">
+    &#9888; Morning peak: ${s.morningPeakTrips} trips needed 07:00–09:00. All ${s.activeTMs} available TMs must be dispatched by 06:00. Sequential cycling required.
+  </div>
+  <div class="sim-tabs">
+    <button class="sim-tab on" onclick="simTab('sched')">Casting Schedule</button>
+    <button class="sim-tab" onclick="simTab('timeline')">Dispatch Timeline</button>
+    <button class="sim-tab" onclick="simTab('validation')">Model Validation</button>
+  </div>
+  <div class="sim-panel on" id="simP-sched">
+    <div class="sim-tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Client</th><th>Address</th><th>Qty (CFT)</th>
+          <th>Trips</th><th>Dist</th><th>Cycle</th>
+          <th>1st Dispatch</th><th>Cast Time</th><th>Type</th><th>Shift</th>
+        </tr></thead>
+        <tbody>${cs.map((c,i)=>`<tr>
+          <td style="color:var(--sub);font-family:var(--mono)">${i+1}</td>
+          <td><b style="font-size:12px">${esc(c.name)}</b></td>
+          <td style="color:var(--sub);font-size:11px">${esc(c.addr)}</td>
+          <td style="font-weight:600;font-family:var(--mono)">${c.qty.toLocaleString()}</td>
+          <td><span style="font-weight:700;color:${c.tripsNeeded>10?'var(--red)':c.tripsNeeded>6?'var(--gold)':'var(--text)'};font-family:var(--mono)">${c.tripsNeeded}</span></td>
+          <td style="font-family:var(--mono);font-size:11px">${c.dist}km</td>
+          <td>
+            <span style="font-family:var(--mono);color:${c.cycleMin>200?'var(--red)':c.cycleMin>150?'var(--gold)':'var(--cyan)'}">
+              ${c.cycleMin}m
+            </span>
+          </td>
+          <td style="font-family:var(--mono);font-size:11px;color:${c.firstDispMin<0?'var(--red)':'var(--gold)'}">${fmt24(c.firstDispMin)}</td>
+          <td style="font-family:var(--mono);font-size:11px">${fmt24(c.castMin)}</td>
+          <td><span class="tg ${c.pump?'tcn':'tok'}" style="font-size:9.5px">${c.pump?'Pump':'Direct'}</span></td>
+          <td><span class="tg ${c.isNight?'twa':'tdm'}" style="font-size:9.5px">${c.isNight?'Night':'Day'}</span></td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--dim)">
+      1st Dispatch = time truck must leave plant so driver arrives before concrete pour begins. Red = pre-dawn dispatch required.
+    </div>
+  </div>
+
+  <div class="sim-panel" id="simP-timeline">
+    <div style="font-size:12px;color:var(--sub);margin-bottom:10px">Blue bars = Day shift castings (06:00–18:00). Amber = Night. Dashed line = casting start. Bar = dispatch window.</div>
+    <div style="overflow-x:auto">
+      <svg id="simTlSvg" viewBox="0 0 680 ${Math.max(200, cs.length * 28 + 55)}" width="100%" style="min-width:580px">
+        ${buildSimTimelineSvg(cs)}
+      </svg>
+    </div>
+  </div>
+
+  <div class="sim-panel" id="simP-validation">
+    <div class="validation-box">
+      <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">&#9989; System Validation — Real vs Model (18 May Observation)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12.5px">
+        <div>
+          <div style="color:var(--sub);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Observed (SHA 14-0550)</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);font-family:var(--mono)">${s.observedActual.actualCycleMin} min</div>
+          <div style="color:var(--sub);font-size:11px">Driver: ${esc(s.observedActual.driver)}<br>Site: ${esc(s.observedActual.site)}<br>Distance: ${s.observedActual.distKm} km</div>
+        </div>
+        <div>
+          <div style="color:var(--sub);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Model prediction</div>
+          <div style="font-size:20px;font-weight:700;color:var(--cyan);font-family:var(--mono)">${s.observedActual.modelCycleMin} min</div>
+          <div style="color:var(--sub);font-size:11px">Error: <b style="color:var(--green)">${s.observedActual.errorPct}%</b><br>Load(30)+Travel(36)+Wait(15)+Unload(20)+Return(26)</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:12px">
+        <div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Why model is conservative (238 min)</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7">TM sheet uses <b>30 km</b> as avg distance for all ARMCL sites. Most Dhaka sites are 8–22 km. Model is deliberately conservative — ensures fleet is never under-planned.</div>
+      </div>
+      <div style="background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:12px">
+        <div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">How the system handles this</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7">Each order stores its real distance. SMV targets are <b>distance-adjusted</b> per trip. A 15 km site gets a 127 min target, not 238. NPT only flags genuinely delayed trips.</div>
+      </div>
+    </div>
+  </div>`;
+
+  content.innerHTML = html;
+  window.simTabActive = 'sched';
+}
+
+function buildSimTimelineSvg(cs) {
+  const W=680, ML=120, MR=12, CW=W-ML-MR, H=cs.length*28+55;
+  const T0=4*60, T1=28*60, TR=T1-T0;
+  const tx=m=>{const adj=((m%1440)+1440)%1440; return ML+(((adj<T0?adj+1440:adj)-T0)/TR*CW);};
+  let g='';
+  for(let h=4;h<=28;h+=2){
+    const x=ML+(h-4)/(TR/60)*CW;
+    g+=`<line x1="${x}" y1="0" x2="${x}" y2="${H-18}" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>`;
+    g+=`<text x="${x}" y="${H-4}" text-anchor="middle" font-size="9" fill="#4a5d7a" font-family="monospace">${String(h%24).padStart(2,'0')}h</text>`;
+  }
+  cs.forEach((c,i)=>{
+    const y=i*28+8;
+    const col=c.isNight?'#C9821A':'#1A4D8F';
+    const colA=c.isNight?'rgba(201,130,26,0.18)':'rgba(26,77,143,0.18)';
+    const fd=c.firstDispMin, ld=c.castMin + c.tripsNeeded*c.cycleMin*0.6;
+    const x1=Math.max(ML,tx(fd)), x2=Math.min(W-MR,tx(ld));
+    const cx=tx(c.castMin);
+    const lbl=c.name.length>15?c.name.slice(0,14)+'…':c.name;
+    g+=`<text x="${ML-4}" y="${y+14}" text-anchor="end" font-size="10" fill="#7e93b5">${lbl}</text>`;
+    g+=`<rect x="${x1}" y="${y+2}" width="${Math.max(2,x2-x1)}" height="20" rx="3" fill="${colA}" stroke="${col}" stroke-width="0.5"/>`;
+    g+=`<line x1="${cx}" y1="${y}" x2="${cx}" y2="${y+24}" stroke="${col}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+    g+=`<text x="${Math.min(x1+4, cx-2)}" y="${y+15}" font-size="9" fill="${col}" font-weight="600">${c.tripsNeeded}t</text>`;
+  });
+  return g;
+}
+
+function simTab(id) {
+  document.querySelectorAll('.sim-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.sim-panel').forEach(p=>p.classList.remove('on'));
+  event.target.classList.add('on');
+  const el = document.getElementById('simP-'+id);
+  if(el) el.classList.add('on');
+  window.simTabActive = id;
+}
+
 // ── Theme toggle ─────────────────────────────────────────────────────
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light');
@@ -1221,6 +1475,7 @@ window.calculateRequirements=calculateRequirements; window.saveMasterOrder=saveM
 window.buildCycleRows=buildCycleRows; window.afc=afc; window.submitCycle=submitCycle;
 window.submitOps=submitOps; window.saveCfg=saveCfg; window.boot=boot;
 window.saveFormUrl=saveFormUrl; window.openFormUrl=openFormUrl; window.refreshFormLog=refreshFormLog; window.castingBadge=castingBadge; window.toggleTheme=toggleTheme;
+window.loadSim18=loadSim18; window.simTab=simTab; window.renderTruckSeqPreview=renderTruckSeqPreview;
 window.openCapacitySection=openCapacitySection; window.capacityLogin=capacityLogin; window.capacityLogout=capacityLogout;
 window.requestCapOtp=requestCapOtp; window.resetCapPin=resetCapPin; window.loadCapacityModel=loadCapacityModel;
 window.syncCap=syncCap; window.saveCapAssumptions=saveCapAssumptions;
