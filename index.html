@@ -397,11 +397,14 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <div class="fi"><label>SKU / Grade</label><select id="ocSku"><option value="">Select SKU...</option></select></div>
               <div class="fi"><label>Total Quantity (CFT)</label><input id="ocQty" type="number" min="1" step="0.01" placeholder="e.g. 2470"></div>
               <div class="fi"><label>Pump Required</label><select id="ocPump"><option>No</option><option>Yes</option></select></div>
+              <div class="fi" id="ocPumpCountWrap" style="display:none"><label>No. of Pumps</label><input id="ocPumpCount" type="number" min="1" step="1" placeholder="e.g. 2"></div>
               <div class="fi"><label>Target Date</label><input id="ocDate" type="date"></div>
               <div class="fi"><label>Target Time</label><input id="ocTime" type="time"></div>
-              <div class="fi"><label>Casting Type</label><select id="ocCastType"><option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option></select></div>
+              <div class="fi"><label>Structure Type</label><select id="ocCastType"><option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option></select></div>
               <div class="fi"><label>Casting Start Time (UL Start Anchor) <span style="color:var(--cyan);font-weight:400;text-transform:none">— truck 1 UL start</span></label><input id="ocCastTime" type="time" placeholder="e.g. 09:00"></div>
               <div class="fi"><label>Distance Override (km) &mdash; optional</label><input id="ocOvr" type="number" placeholder="Leave blank for auto"></div>
+              <div class="fi"><label>Sales Person Name</label><input id="ocSales" type="text" placeholder="e.g. Rafiq Hasan"></div>
+              <div class="fi"><label>Site Engineer</label><input id="ocEngineer" type="text" placeholder="e.g. Eng. Kabir Ahmed"></div>
               <div class="fi s3"><label>Notes</label><input id="ocNotes" type="text" placeholder="Special instructions..."></div>
             </div>
             <div style="margin-top:16px">
@@ -545,7 +548,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <div><b style="color:var(--gold)">Active Trips</b><br>Appear immediately after a Dispatch Cycle is committed.</div>
               <div><b style="color:var(--gold)">Truck Lock</b><br>A truck stays assigned to its trip until Factory Return is submitted.</div>
               <div><b style="color:var(--gold)">Live Sync</b><br>Every submission instantly updates Dashboard KPIs, MTS, Truck Output, and SMV sheets.</div>
-              <div><b style="color:var(--gold)">Sequence</b><br>Factory Out &#8594; Arrival &#8594; Unload Start &#8594; Unload End &#8594; Factory Return<br><br><b style="color:var(--gold)">SMV Target</b><br>Pump: 238 min | Head Cast: 286 min | Direct: 262 min</div>
+              <div><b style="color:var(--gold)">Sequence</b><br>Factory Out &#8594; Arrival &#8594; Unload Start &#8594; Unload End &#8594; Factory Return<br><br><b style="color:var(--gold)">SMV Target (defaults)</b><br>Pump: 238 min | Head Cast: 286 min | Direct: 262 min <span style="color:var(--dim)">— configurable per Structure Type in the DDL sheet</span></div>
             </div>
           </div>
         </div>
@@ -678,7 +681,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbwwXC1BzXkRnXMYejYRkHjHlrUA6y3SkzZrC68HMjEmz6AlYwuYe9--p2lVaFeiEeLsKw/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwtRXgbeO_DooN3y0Wf9wWE3roroXqXcCptIYwCr1RJk4Oaf-Cr6EiLsuYmNFEsJEll0g/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -824,15 +827,25 @@ function initDates() {
   const today=new Date(), t=today.toTimeString().slice(0,5);
   ['ocDate','iiDate'].forEach(id=>{ if(qs(id)) qs(id).valueAsDate=today; });
   ['ocTime','iiTime'].forEach(id=>{ if(qs(id)) qs(id).value=t; });
+  if (typeof syncPumpCountVisibility === 'function') syncPumpCountVisibility();
 }
 
 // ─────────────────────────────────────────────────────────────
 // DROPDOWNS & RENDERERS
 // ─────────────────────────────────────────────────────────────
+// Emoji per known Structure Type — anything not listed falls back to a generic icon.
+// Purely cosmetic; does not affect unload-time/SMV calculations (those are DDL-driven, see backend).
+function structureIcon(name) {
+  const map = {'Pump':'&#128667;','Head Cast':'&#127959;','Direct':'&#128200;'};
+  return map[name] || '&#127959;';
+}
 function buildDropdowns() {
   const s = v => `<option value="${esc(v)}">${esc(v)}</option>`;
   if(qs('ocClient')) qs('ocClient').innerHTML='<option value="">Select client...</option>'+(APP.clients||[]).map(s).join('');
   if(qs('ocSku'))    qs('ocSku').innerHTML   ='<option value="">Select SKU...</option>'  +(APP.skus||[]).map(s).join('');
+  if(qs('ocCastType') && (APP.structureTypes||[]).length) {
+    qs('ocCastType').innerHTML = (APP.structureTypes||[]).map(t=>`<option value="${esc(t)}">${structureIcon(t)} ${esc(t)}</option>`).join('');
+  }
   if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
   if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
   // FIXED: Populate driver dropdown on Dispatch cycle rows using allDrivers (full list, not just available)
@@ -895,7 +908,7 @@ function renderDashboard() {
   if(qs('dispTbl')){
     const oRows=APP.activeOrders||[];
     qs('dispTbl').innerHTML=oRows.length
-      ?`<table><thead><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips</th><th>Status</th></tr></thead><tbody>${oRows.map(r=>`<tr><td><b style="color:var(--gold);font-family:var(--mono)">${r.orderId}</b></td><td>${esc(r.client)}</td><td>${bdtF(r.totalQty)} CFT</td><td style="color:var(--green)">${bdtF(r.dispatchedQty)}</td><td style="color:var(--red);font-weight:700">${bdtF(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`
+      ?`<table><thead><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips</th><th>Sales Person</th><th>Site Engineer</th><th>No. of Pumps</th><th>Status</th></tr></thead><tbody>${oRows.map(r=>`<tr><td><b style="color:var(--gold);font-family:var(--mono)">${r.orderId}</b></td><td>${esc(r.client)}</td><td>${bdtF(r.totalQty)} CFT</td><td style="color:var(--green)">${bdtF(r.dispatchedQty)}</td><td style="color:var(--red);font-weight:700">${bdtF(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td style="font-size:11.5px;color:var(--sub)">${esc(r.salesPerson)||'—'}</td><td style="font-size:11.5px;color:var(--sub)">${esc(r.siteEngineer)||'—'}</td><td>${r.pumpCount||'—'}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`
       :'<div style="font-size:12.5px;color:var(--dim);padding:10px 0">No active orders.</div>';
   }
 
@@ -931,6 +944,13 @@ if(qs('ocClient')) qs('ocClient').addEventListener('change', async e => {
   try { qs('ocAddr').value = await gs('getClientAddressForWeb', e.target.value) || ''; }
   catch(err) { /* silent */ }
 });
+
+// Show "No. of Pumps" only when Pump Required = Yes
+function syncPumpCountVisibility() {
+  const wrap = qs('ocPumpCountWrap');
+  if (wrap) wrap.style.display = (qs('ocPump') && qs('ocPump').value === 'Yes') ? 'flex' : 'none';
+}
+if(qs('ocPump')) qs('ocPump').addEventListener('change', syncPumpCountVisibility);
 
 async function calculateRequirements() {
   const client = qs('ocClient').value, qty = qs('ocQty').value;
@@ -1031,7 +1051,10 @@ async function saveMasterOrder() {
     client:qs('ocClient').value, address:qs('ocAddr').value,
     sku:qs('ocSku').value, qty:qs('ocQty').value, pump:qs('ocPump').value,
     date:qs('ocDate').value, time:qs('ocTime').value, notes:qs('ocNotes').value,
-    distanceKm:CALC.distanceKm, etaMin:CALC.etaMin
+    distanceKm:CALC.distanceKm, etaMin:CALC.etaMin,
+    salesPerson: qs('ocSales') ? qs('ocSales').value.trim() : '',
+    siteEngineer: qs('ocEngineer') ? qs('ocEngineer').value.trim() : '',
+    pumpCount: qs('ocPumpCount') ? qs('ocPumpCount').value : ''
   };
   try {
     const res=await gs('saveMasterOrder',payload);
@@ -1039,6 +1062,9 @@ async function saveMasterOrder() {
     toast('&#10003; Master Order saved!');
     qs('resultSec').style.display='none';
     qs('ocQty').value=''; qs('ocOvr').value=''; CALC={}; hideGeoBar();
+    if(qs('ocSales')) qs('ocSales').value='';
+    if(qs('ocEngineer')) qs('ocEngineer').value='';
+    if(qs('ocPumpCount')) qs('ocPumpCount').value='';
   } catch(err){ toast(err.message,true); }
 }
 
@@ -1069,14 +1095,16 @@ function buildCycleRows() {
     if(!avail) return `<option value="${esc(d)}" disabled style="color:#888">${esc(d)} (busy)</option>`;
     return `<option value="${esc(d)}">${esc(d)}</option>`;
   }).join('');
-  const ctOpts='<option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option>';
+  const ctOpts=(APP.structureTypes||[]).length
+    ? APP.structureTypes.map(t=>`<option value="${esc(t)}">${structureIcon(t)} ${esc(t)}</option>`).join('')
+    : '<option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option>';
   let html='';
   for(let i=0;i<count;i++){
     html+=`<div class="ar" id="cr_${i}" style="grid-template-columns:1.2fr 1.2fr .7fr .8fr">
       <div class="fi"><label>Truck ${i+1}</label><select class="ct" onchange="afc(${i},this)">${tOpts}</select></div>
       <div class="fi"><label>Driver ${i+1}</label><select class="cd">${dOpts}</select></div>
       <div class="fi"><label>Load (CFT)</label><input type="number" class="cq" placeholder="${Math.min(229,Math.round(o.remainingQty))}" min="1"></div>
-      <div class="fi"><label>Casting Type</label><select class="cc">${ctOpts}</select></div>
+      <div class="fi"><label>Structure Type</label><select class="cc">${ctOpts}</select></div>
     </div>`;
   }
   qs('dcRows').innerHTML=html; qs('dcPanel').style.display='block';
