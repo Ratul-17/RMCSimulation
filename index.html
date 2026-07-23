@@ -403,7 +403,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <div class="fi"><label>Structure Type</label><select id="ocCastType"><option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option></select></div>
               <div class="fi"><label>Casting Start Time (UL Start Anchor) <span style="color:var(--cyan);font-weight:400;text-transform:none">— truck 1 UL start</span></label><input id="ocCastTime" type="time" placeholder="e.g. 09:00"></div>
               <div class="fi"><label>Distance Override (km) &mdash; optional</label><input id="ocOvr" type="number" placeholder="Leave blank for auto"></div>
-              <div class="fi"><label>Sales Person Name</label><input id="ocSales" type="text" placeholder="e.g. Rafiq Hasan"></div>
+              <div class="fi"><label>Sales Person Name</label><select id="ocSales"><option value="">Select sales person...</option></select></div>
               <div class="fi"><label>Site Engineer</label><input id="ocEngineer" type="text" placeholder="e.g. Eng. Kabir Ahmed"></div>
               <div class="fi s3"><label>Notes</label><input id="ocNotes" type="text" placeholder="Special instructions..."></div>
             </div>
@@ -681,7 +681,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbwtRXgbeO_DooN3y0Wf9wWE3roroXqXcCptIYwCr1RJk4Oaf-Cr6EiLsuYmNFEsJEll0g/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwwXC1BzXkRnXMYejYRkHjHlrUA6y3SkzZrC68HMjEmz6AlYwuYe9--p2lVaFeiEeLsKw/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -843,6 +843,7 @@ function buildDropdowns() {
   const s = v => `<option value="${esc(v)}">${esc(v)}</option>`;
   if(qs('ocClient')) qs('ocClient').innerHTML='<option value="">Select client...</option>'+(APP.clients||[]).map(s).join('');
   if(qs('ocSku'))    qs('ocSku').innerHTML   ='<option value="">Select SKU...</option>'  +(APP.skus||[]).map(s).join('');
+  if(qs('ocSales'))  qs('ocSales').innerHTML ='<option value="">Select sales person...</option>'+(APP.salesPersons||[]).map(s).join('');
   if(qs('ocCastType') && (APP.structureTypes||[]).length) {
     qs('ocCastType').innerHTML = (APP.structureTypes||[]).map(t=>`<option value="${esc(t)}">${structureIcon(t)} ${esc(t)}</option>`).join('');
   }
