@@ -351,7 +351,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
   <div class="hdr-logo">
     <div class="hdr-mark">&#128667;</div>
     <div>
-      <div class="hdr-title">ARMCL&#8209;01 Delivery Intelligence System</div>
+      <div class="hdr-title">ARMCL&#8209;01 LOGISTICS COMMAND</div>
       <div class="hdr-sub">DELIVERY TRACKING &nbsp;&#183;&nbsp; CYCLIC DISPATCH &nbsp;&#183;&nbsp; ROUTE INTELLIGENCE</div>
     </div>
   </div>
@@ -403,7 +403,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
       <button class="nb" onclick="showTab('sim18',this)"><span class="ni">&#127991;</span>May 18 Simulation</button>
       <button class="nb admin-only" style="display:none" onclick="showTab('cfg',this)"><span class="ni">&#9881;</span>Cost Model</button>
     </div>
-    <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.1<br>Developer : Md. Ariful Islam Ratul</p></div>
+    <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.1<br>Dhour Plant, Dhaka, Bangladesh</p></div>
   </nav>
 
   <main class="main" id="mainEl">
@@ -454,6 +454,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <span id="geoIcon"></span><span id="geoMsg"></span>
             </div>
             <div class="fg2">
+              <div class="fi"><label>Order No (DO Challan No)</label><input id="ocDoNo" type="text" list="ocDoNoList" placeholder="e.g. SO0720262295" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"><datalist id="ocDoNoList"></datalist></div>
               <div class="fi"><label>Client</label><select id="ocClient"><option value="">Select client...</option></select></div>
               <div class="fi s2"><label>Delivery Address <span style="color:var(--dim);font-weight:400;text-transform:none">(from DDL sheet &mdash; editable)</span></label><input id="ocAddr" type="text" placeholder="Auto&#8209;fills on client select"></div>
               <div class="fi"><label>SKU / Grade</label><select id="ocSku"><option value="">Select SKU...</option></select></div>
@@ -854,7 +855,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbwSoJ6ZVox0NE5yMbRW8U4qHkeB7qTyAc3EZsxeRfJjA1zujMl9nm6-Mug9PILsGEeAHA/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwwXC1BzXkRnXMYejYRkHjHlrUA6y3SkzZrC68HMjEmz6AlYwuYe9--p2lVaFeiEeLsKw/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -1501,7 +1502,11 @@ function buildDropdowns() {
     qs('ocCastTypeList').innerHTML = (APP.structureTypes||[]).map(t=>`<option value="${esc(t)}">`).join('');
     if(qs('ocCastType') && !qs('ocCastType').value) qs('ocCastType').value = (APP.structureTypes||[])[0] || 'Pump';
   }
-  if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
+  if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}${o.doChallanNo?' · '+esc(o.doChallanNo):''}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
+  // Type-ahead suggestions for Order No (DO Challan No) — previously used
+  // values, purely a convenience; any correctly-formatted value can still be
+  // typed fresh (uniqueness is enforced server-side, not by this list).
+  if(qs('ocDoNoList')) qs('ocDoNoList').innerHTML = [...new Set((APP.activeOrders||[]).map(o=>o.doChallanNo).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join('');
   if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
   // FIXED: Populate driver dropdown on Dispatch cycle rows using allDrivers (full list, not just available)
   // allDrivers is now returned from getBootstrapData() for use in form driver selections
@@ -1563,7 +1568,7 @@ function renderDashboard() {
   if(qs('dispTbl')){
     const oRows=APP.activeOrders||[];
     qs('dispTbl').innerHTML=oRows.length
-      ?`<table><thead><tr><th>Order ID</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips</th><th>Sales Person</th><th>Site Engineer</th><th>No. of Pumps</th><th>Status</th></tr></thead><tbody>${oRows.map(r=>`<tr><td><b style="color:var(--gold);font-family:var(--mono)">${r.orderId}</b></td><td>${esc(r.client)}</td><td>${bdtF(r.totalQty)} CFT</td><td style="color:var(--green)">${bdtF(r.dispatchedQty)}</td><td style="color:var(--red);font-weight:700">${bdtF(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td style="font-size:11.5px;color:var(--sub)">${esc(r.salesPerson)||'—'}</td><td style="font-size:11.5px;color:var(--sub)">${esc(r.siteEngineer)||'—'}</td><td>${r.pumpCount||'—'}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`
+      ?`<table><thead><tr><th>Order ID</th><th>DO Challan No</th><th>Client</th><th>Total Qty</th><th>Dispatched</th><th>Remaining</th><th>Est Trips</th><th>Sales Person</th><th>Site Engineer</th><th>No. of Pumps</th><th>Status</th></tr></thead><tbody>${oRows.map(r=>`<tr><td><b style="color:var(--gold);font-family:var(--mono)">${r.orderId}</b></td><td style="font-family:var(--mono);font-size:11.5px">${esc(r.doChallanNo)||'—'}</td><td>${esc(r.client)}</td><td>${bdtF(r.totalQty)} CFT</td><td style="color:var(--green)">${bdtF(r.dispatchedQty)}</td><td style="color:var(--red);font-weight:700">${bdtF(r.remainingQty)}</td><td>${r.estTripsLeft}</td><td style="font-size:11.5px;color:var(--sub)">${esc(r.salesPerson)||'—'}</td><td style="font-size:11.5px;color:var(--sub)">${esc(r.siteEngineer)||'—'}</td><td>${r.pumpCount||'—'}</td><td>${stTag(r.status)}</td></tr>`).join('')}</tbody></table>`
       :'<div style="font-size:12.5px;color:var(--dim);padding:10px 0">No active orders.</div>';
   }
 
@@ -1699,10 +1704,20 @@ async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed)
   }
 }
 
+// Order No / DO Challan No format: "SO" + digits only (e.g. SO0720262295).
+// Length isn't fixed (challan numbers vary), but the SO-prefix-then-digits
+// shape is required — checked here so a bad value never even reaches the
+// backend, which enforces the same rule (and uniqueness) again server-side.
+const DO_CHALLAN_RE = /^SO\d+$/;
+
 async function saveMasterOrder() {
   if (!CALC.distanceKm) return toast('Run Step 1 first.', true);
   if (!qs('ocSku').value) return toast('Please select a SKU.', true);
+  const doChallanNo = (qs('ocDoNo').value||'').trim().toUpperCase();
+  if (!doChallanNo) return toast('Order No (DO Challan No) is required.', true);
+  if (!DO_CHALLAN_RE.test(doChallanNo)) return toast('Order No must be "SO" followed by digits only (e.g. SO0720262295).', true);
   const payload = {
+    doChallanNo,
     client:qs('ocClient').value, address:qs('ocAddr').value,
     sku:qs('ocSku').value, qty:qs('ocQty').value, pump:qs('ocPump').value,
     date:qs('ocDate').value, time:qs('ocTime').value, notes:qs('ocNotes').value,
@@ -1718,6 +1733,7 @@ async function saveMasterOrder() {
     toast('&#10003; Master Order saved!');
     qs('resultSec').style.display='none';
     qs('ocQty').value=''; qs('ocOvr').value=''; CALC={}; hideGeoBar();
+    qs('ocDoNo').value='';
     if(qs('ocSales')) qs('ocSales').value='';
     if(qs('ocEngineer')) qs('ocEngineer').value='';
     if(qs('ocPumpCount')) qs('ocPumpCount').value='';
