@@ -220,6 +220,14 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 .leaflet-control-attribution{background:rgba(10,14,26,.8)!important;color:var(--dim)!important;font-size:10px!important}
 
 
+/* ── ADMIN LOGIN MODAL ───────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;display:flex;align-items:center;justify-content:center}
+.modal-box{width:100%;max-width:360px;background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:14px}
+.modal-box .fi{margin-bottom:12px}
+.modal-box .fi label{display:block;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.modal-box .fi input{width:100%;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:9px 11px;color:var(--text);font-size:13.5px}
+
 /* ── CAPACITY SIMULATOR ───────────────── */
 .lockbox{max-width:520px;margin:0 auto;background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:22px}
 .lock-ico{width:46px;height:46px;border-radius:12px;background:var(--gold-soft);display:grid;place-items:center;color:var(--gold);font-size:22px;margin-bottom:12px}
@@ -331,16 +339,33 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
   </div>
   <div class="hdr-r" style="gap:10px">
     <button id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark" style="background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:6px 11px;color:var(--sub);font-size:14px;cursor:pointer;transition:var(--trans)" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--sub)'">&#9790;</button>
+    <button id="adminBtn" onclick="adminBtnClick()" title="Admin login" style="background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:6px 13px;color:var(--sub);font-size:12.5px;font-weight:700;letter-spacing:.03em;cursor:pointer;transition:var(--trans)">&#128100; ADMIN LOGIN</button>
     <div class="pulse-dot">LIVE</div>
   </div>
 </header>
+
+<div id="adminModalOverlay" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">Admin Login</div>
+    <div class="fi"><label>ID</label><input id="adminIdInp" type="text" placeholder="Admin ID" autocomplete="off"></div>
+    <div class="fi"><label>Password</label><input id="adminPassInp" type="password" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')adminLogin()"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn bp" style="flex:1" onclick="adminLogin()">Login</button>
+      <button class="btn bs" style="flex:1" onclick="closeAdminModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <div class="body">
 
   <nav class="sb" id="sb">
     <div class="sb-sec">
-      <div class="sb-lbl">Operations</div>
+      <div class="sb-lbl">Insights</div>
       <button class="nb on" onclick="showTab('dash',this)"><span class="ni">&#128202;</span>Live Dashboard</button>
+      <button class="nb" onclick="showTab('reports',this)"><span class="ni">&#128196;</span>Reports</button>
+    </div>
+    <div class="sb-sec admin-only" style="display:none">
+      <div class="sb-lbl">Operations (Admin)</div>
       <button class="nb" onclick="showTab('order',this)"><span class="ni">&#128203;</span>Order Creation</button>
       <button class="nb" onclick="showTab('dispatch',this)"><span class="ni">&#128260;</span>Dispatch Cycles</button>
       <button class="nb" onclick="showTab('ops',this)"><span class="ni">&#9889;</span>Operations Console</button>
@@ -350,7 +375,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
       <div class="sb-lbl">System</div>
       <button class="nb" onclick="showTab('capacity',this)"><span class="ni">&#128200;</span>Capacity Simulator</button>
       <button class="nb" onclick="showTab('sim18',this)"><span class="ni">&#127991;</span>May 18 Simulation</button>
-      <button class="nb" onclick="showTab('cfg',this)"><span class="ni">&#9881;</span>Cost Model</button>
+      <button class="nb admin-only" style="display:none" onclick="showTab('cfg',this)"><span class="ni">&#9881;</span>Cost Model</button>
     </div>
     <div class="sb-ft"><p>ARMCL&#8209;01 &nbsp;&#183;&nbsp; Delivery Intelligence v3.1<br>Dhour Plant, Dhaka, Bangladesh</p></div>
   </nav>
@@ -658,6 +683,34 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         </div>
       </div>
 
+      <div id="reports" class="sec">
+        <div class="ph">
+          <div><div class="pt">Reports</div><div class="ps">Fleet &amp; capacity utilization, trip performance, and delivery trend for any date range</div></div>
+        </div>
+        <div class="pn">
+          <div class="pnh"><div class="pnt">Select Date Range</div></div>
+          <div class="fg2b" style="align-items:end">
+            <div class="fi"><label>From Date</label><input id="repFrom" type="date"></div>
+            <div class="fi"><label>To Date</label><input id="repTo" type="date"></div>
+            <div class="fi"><button class="btn bp" onclick="runReport()">Run Report</button></div>
+          </div>
+        </div>
+        <div id="repEmpty" style="color:var(--sub);font-size:13px;padding:30px 0;text-align:center">Pick a From/To date and click Run Report.</div>
+        <div id="repResults" style="display:none">
+          <div class="kg" id="repKpiRow" style="margin-top:15px"></div>
+          <div class="g3" style="margin-top:15px">
+            <div class="pn"><div class="pnh"><div class="pnt">Status Breakdown</div></div><div class="pbg"><canvas id="cRepPie"></canvas></div></div>
+            <div class="pn"><div class="pnh"><div class="pnt">Delivery Trend (Avg Cycle &amp; Qty)</div></div><div class="pbg"><canvas id="cRepTrend"></canvas></div></div>
+            <div class="pn"><div class="pnh"><div class="pnt">Daywise Fleet / Cap Utilization %</div></div><div class="pbg"><canvas id="cRepUtil"></canvas></div></div>
+          </div>
+          <div class="g3" style="margin-top:15px">
+            <div class="pn"><div class="pnh"><div class="pnt">Truck Performance</div></div><div class="tw"><table id="repTruckTbl"><thead><tr><th>Truck</th><th>Trips</th><th>Qty (CFT)</th></tr></thead><tbody></tbody></table></div></div>
+            <div class="pn"><div class="pnh"><div class="pnt">Driver Performance</div></div><div class="tw"><table id="repDriverTbl"><thead><tr><th>Driver</th><th>Trips</th><th>Qty (CFT)</th></tr></thead><tbody></tbody></table></div></div>
+            <div class="pn"><div class="pnh"><div class="pnt">Top Clients</div></div><div class="tw"><table id="repClientTbl"><thead><tr><th>Client</th><th>Qty (CFT)</th></tr></thead><tbody></tbody></table></div></div>
+          </div>
+        </div>
+      </div>
+
       <div id="cfg" class="sec">
         <div class="ph"><div><div class="pt">Cost Model Settings</div><div class="ps">Configure plant parameters and BDT cost factors</div></div></div>
         <div class="pn">
@@ -692,11 +745,13 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbxspUu05JksfUPC9HIVXfB01fgDLlwxhNNmWS_vc9KHXdIjx3SeghchIYrfW2swQNKAJA/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwr4Bmgz5GPLjhIfEnF3mqHay49zBqKdrPTXLxbgQuOZe7gh6Nkb8zaeCwzGzwz42c0yQ/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
 let APP = {}, OMAP = null, RLAYER = null, DMKR = null, CALC = {}, CH = {}, CAP = {token:null, vals:{}};
+let ADMIN = {token:null}, REP = null;
+const ADMIN_GATED_TABS = ['order','dispatch','ops','cfg','formlog'];
 
 // ─────────────────────────────────────────────────────────────
 // UTILS
@@ -822,6 +877,11 @@ function drawRoute(res) {
 function toggleSb() { qs('sb').classList.toggle('on'); }
 
 function showTab(id, btn) {
+  if (ADMIN_GATED_TABS.includes(id) && !ADMIN.token) {
+    toast('Please log in as Admin to access this section.', true);
+    openAdminModal();
+    id = 'dash'; btn = document.querySelector('.nb[onclick*="\'dash\'"]');
+  }
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   qs(id).classList.add('on');
@@ -834,10 +894,124 @@ function showTab(id, btn) {
   qs('mainEl').scrollTo({top:0, behavior:'smooth'});
 }
 
+// ─────────────────────────────────────────────────────────────
+// ADMIN LOGIN (gates data-entry only — Live Dashboard & Reports stay
+// visible to everyone; Capacity Simulator keeps its own separate PIN lock)
+// ─────────────────────────────────────────────────────────────
+function applyAdminVisibility() {
+  const on = !!ADMIN.token;
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = on ? '' : 'none');
+  const btn = qs('adminBtn');
+  if (btn) {
+    btn.innerHTML = on ? '&#128100; ADMIN &#8226; LOGOUT' : '&#128100; ADMIN LOGIN';
+    btn.title = on ? 'Click to log out' : 'Admin login';
+  }
+}
+
+function adminBtnClick() {
+  if (ADMIN.token) { adminLogout(); } else { openAdminModal(); }
+}
+
+function openAdminModal() {
+  qs('adminIdInp').value=''; qs('adminPassInp').value='';
+  qs('adminModalOverlay').style.display='flex';
+  setTimeout(()=>qs('adminIdInp').focus(), 50);
+}
+
+function closeAdminModal() { qs('adminModalOverlay').style.display='none'; }
+
+async function adminLogin() {
+  const id=qs('adminIdInp').value.trim(), pass=qs('adminPassInp').value.trim();
+  if (!id || !pass) return toast('Enter ID and Password.', true);
+  try {
+    const r = await gs('verifyAdminLogin', {id, pass});
+    ADMIN.token = r.token;
+    localStorage.setItem('armcl_admin_token', r.token);
+    applyAdminVisibility();
+    closeAdminModal();
+    toast('&#10003; Logged in as Admin.');
+  } catch(err) { toast(err.message, true); }
+}
+
+function adminLogout() {
+  ADMIN.token = null;
+  localStorage.removeItem('armcl_admin_token');
+  applyAdminVisibility();
+  if (ADMIN_GATED_TABS.includes(document.querySelector('.sec.on')?.id)) {
+    showTab('dash', document.querySelector('.nb[onclick*="\'dash\'"]'));
+  }
+  toast('Logged out.');
+}
+
+async function checkAdminSession() {
+  const saved = localStorage.getItem('armcl_admin_token');
+  if (!saved) return;
+  try {
+    const r = await gs('checkAdminAuth', {token: saved});
+    if (r.ok) { ADMIN.token = saved; applyAdminVisibility(); }
+    else localStorage.removeItem('armcl_admin_token');
+  } catch(err) { /* ignore — stays logged out */ }
+}
+
+// ─────────────────────────────────────────────────────────────
+// REPORTS (date-range replica of the dashboard)
+// ─────────────────────────────────────────────────────────────
+async function runReport() {
+  const fromDate=qs('repFrom').value, toDate=qs('repTo').value;
+  if (!fromDate || !toDate) return toast('Pick both From Date and To Date.', true);
+  if (fromDate > toDate) return toast('From Date must be on or before To Date.', true);
+  toast('Loading report...');
+  try {
+    REP = await gs('getReportData', {fromDate, toDate});
+    renderReport();
+    toast('&#10003; Report loaded.');
+  } catch(err) { toast(err.message, true); }
+}
+
+function renderReport() {
+  if (!REP) return;
+  qs('repEmpty').style.display='none';
+  qs('repResults').style.display='';
+  const s=REP.summary||{};
+  const kpis=[
+    {l:'Total Trips',      v:bdtF(s.totalTrips||0),        c:''},
+    {l:'Total CFT',        v:bdtF(s.totalCft||0),          c:''},
+    {l:'Fleet Util %',     v:(s.fleetUtilPct||0)+'%',      c:'wa'},
+    {l:'Cap Util %',       v:(s.capUtilPct||0)+'%',        c:(s.capUtilPct||0)>=100?'ba':(s.capUtilPct||0)>=85?'wa':'ok'},
+    {l:'Active Fleet',     v:s.activeTrucks||0,            c:''},
+    {l:'Daily Cap (CFT)',  v:bdtF(s.dailyCapCFT||0),       c:''},
+    {l:'Avg Transit',      v:(s.avgTransit||0)+' min',     c:''},
+    {l:'Avg Wait',         v:(s.avgWait||0)+' min',        c:''},
+    {l:'Avg Unload',       v:(s.avgUnload||0)+' min',      c:''},
+    {l:'Avg Cycle',        v:(s.avgCycle||0)+' min',       c:s.avgCycle>238?'wa':'ok'},
+    {l:'SMV Efficiency',   v:(s.smvEfficiency||0)+'%',     c:s.smvEfficiency>=90?'ok':s.smvEfficiency>=70?'wa':'ba'},
+  ];
+  qs('repKpiRow').innerHTML=kpis.map((k,i)=>`<div class="kc ${k.c}" style="animation-delay:${i*.04}s"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+
+  const cOpt={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7e93b5',font:{size:10.5}}}}};
+  const ax=()=>({x:{ticks:{color:'#7e93b5',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#7e93b5',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}});
+  ['cRepPie','cRepTrend','cRepUtil'].forEach(id=>{if(CH[id]){CH[id].destroy();CH[id]=null;}});
+  const pie=REP.statusPie||{};
+  if(qs('cRepPie')) CH.cRepPie=new Chart(qs('cRepPie'),{type:'doughnut',data:{labels:Object.keys(pie),datasets:[{data:Object.values(pie),backgroundColor:['#60a5fa','#f5a623','#34d1c0','#2dd4a0','#a78bfa','#f06060'],borderWidth:0,hoverOffset:5}]},options:{...cOpt,cutout:'68%'}});
+  const trend=REP.trend||{};
+  if(qs('cRepTrend')) CH.cRepTrend=new Chart(qs('cRepTrend'),{type:'line',data:{labels:trend.labels||[],datasets:[{label:'Avg Cycle (min)',data:trend.cycleVals||[],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.1)',tension:.4,fill:true,pointRadius:3},{label:'Qty CFT',data:trend.qtyVals||[],borderColor:'#34d1c0',backgroundColor:'rgba(52,209,192,.1)',tension:.4,fill:true,pointRadius:3}]},options:{...cOpt,scales:ax()}});
+  const utl=REP.utilLine||{};
+  if(qs('cRepUtil')) CH.cRepUtil=new Chart(qs('cRepUtil'),{type:'line',data:{labels:utl.labels||[],datasets:[{label:'Fleet Util %',data:utl.utilVals||[],borderColor:'#2dd4a0',backgroundColor:'rgba(45,212,160,.1)',tension:.4,fill:true,pointRadius:3},{label:'Cap Util %',data:utl.capUtilVals||[],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.08)',tension:.4,fill:true,pointRadius:3}]},options:{...cOpt,scales:ax()}});
+
+  const tt=REP.truckSummary||[];
+  qs('repTruckTbl').querySelector('tbody').innerHTML = tt.length ? tt.map(r=>`<tr><td><b>${esc(r.truck)}</b></td><td>${r.trips}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim)">No data.</td></tr>';
+  const dd=REP.driverSummary||[];
+  qs('repDriverTbl').querySelector('tbody').innerHTML = dd.length ? dd.map(r=>`<tr><td>${esc(r.driver)}</td><td>${r.trips}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim)">No data.</td></tr>';
+  const cc=REP.topClients||[];
+  qs('repClientTbl').querySelector('tbody').innerHTML = cc.length ? cc.map(r=>`<tr><td>${esc(r.client)}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="2" style="color:var(--dim)">No data.</td></tr>';
+}
+
 function initDates() {
   const today=new Date(), t=today.toTimeString().slice(0,5);
   ['ocDate','iiDate'].forEach(id=>{ if(qs(id)) qs(id).valueAsDate=today; });
   ['ocTime','iiTime'].forEach(id=>{ if(qs(id)) qs(id).value=t; });
+  if (qs('repTo')) qs('repTo').valueAsDate=today;
+  if (qs('repFrom')) { const from=new Date(today); from.setDate(from.getDate()-6); qs('repFrom').valueAsDate=from; }
   if (typeof syncPumpCountVisibility === 'function') syncPumpCountVisibility();
 }
 
@@ -1073,6 +1247,7 @@ async function saveMasterOrder() {
     pumpCount: qs('ocPumpCount') ? qs('ocPumpCount').value : ''
   };
   try {
+    payload.token = ADMIN.token;
     const res=await gs('saveMasterOrder',payload);
     APP=res.data; buildDropdowns(); renderDashboard();
     toast('&#10003; Master Order saved!');
@@ -1220,7 +1395,7 @@ async function submitCycle() {
   const o=(APP.activeOrders||[]).find(x=>x.orderId===orderId);
   if(o&&total>o.remainingQty&&!confirm(`Dispatching ${total} CFT but only ${o.remainingQty} CFT remaining. Proceed?`)) return;
   try{
-    const res=await gs('dispatchPartialOrder',{orderId,assignments:assigns});
+    const res=await gs('dispatchPartialOrder',{orderId,assignments:assigns,token:ADMIN.token});
     APP=res.data; buildDropdowns(); renderDashboard();
     toast('&#128640; Cycle dispatched!');
     qs('dcPanel').style.display='none'; qs('dcStats').style.display='none'; qs('dcOrder').value='';
@@ -1237,7 +1412,7 @@ if(qs('iiEv')) qs('iiEv').addEventListener('change', e => {
 async function submitOps() {
   const rowNo=qs('iiTrip').value; if(!rowNo) return toast('Select a trip first.',true);
   try{
-    const res=await gs('saveInstantEvent',{rowNo,event:qs('iiEv').value,date:qs('iiDate').value,time:qs('iiTime').value,distanceKm:qs('iiDist').value});
+    const res=await gs('saveInstantEvent',{rowNo,event:qs('iiEv').value,date:qs('iiDate').value,time:qs('iiTime').value,distanceKm:qs('iiDist').value,token:ADMIN.token});
     APP=res.data; buildDropdowns(); renderDashboard();
     toast('&#10003; Status updated!'); qs('iiDist').value='';
   }catch(err){toast(err.message,true);}
@@ -1385,7 +1560,7 @@ async function saveCapAssumptions() {
 // SETTINGS
 // ─────────────────────────────────────────────────────────────
 async function saveCfg() {
-  const p={truckCapacity:qs('stCap').value,avgSpeedKmph:qs('stSpd').value,fixedTripBDT:qs('stFix').value,perKmBDT:qs('stKm').value,pumpChargeBDT:qs('stPmp').value,loadingChargeBDT:qs('stLd').value,unloadingChargeBDT:qs('stUl').value,idleCostPerHourBDT:qs('stIdl').value,contingencyPct:qs('stCon').value,loadingBufferMin:qs('stLBuf').value,unloadingBufferMin:qs('stUBuf').value};
+  const p={truckCapacity:qs('stCap').value,avgSpeedKmph:qs('stSpd').value,fixedTripBDT:qs('stFix').value,perKmBDT:qs('stKm').value,pumpChargeBDT:qs('stPmp').value,loadingChargeBDT:qs('stLd').value,unloadingChargeBDT:qs('stUl').value,idleCostPerHourBDT:qs('stIdl').value,contingencyPct:qs('stCon').value,loadingBufferMin:qs('stLBuf').value,unloadingBufferMin:qs('stUBuf').value,token:ADMIN.token};
   try{APP=await gs('saveCostSettings',p);buildDropdowns();renderDashboard();toast('&#10003; Settings saved.');}
   catch(err){toast(err.message,true);}
 }
@@ -1395,6 +1570,8 @@ async function saveCfg() {
 // ─────────────────────────────────────────────────────────────
 async function boot() {
   initDates();
+  applyAdminVisibility();
+  checkAdminSession();
   toast('Loading dashboard data...');
   try {
     APP = await gs('getBootstrapData');
