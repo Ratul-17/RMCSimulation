@@ -781,6 +781,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
           <button class="btn bp mstab on" data-mt="mtTruck" onclick="showMasterTab('mtTruck',this)">Truck Master</button>
           <button class="btn bs mstab" data-mt="mtDriver" onclick="showMasterTab('mtDriver',this)">Driver Master</button>
           <button class="btn bs mstab" data-mt="mtDdl" onclick="showMasterTab('mtDdl',this)">Client &amp; SKU</button>
+          <button class="btn bs mstab" data-mt="mtOffday" onclick="showMasterTab('mtOffday',this)">Offday Log</button>
         </div>
 
         <div id="mtTruck" class="mtpanel on">
@@ -835,6 +836,13 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             </div>
           </div>
         </div>
+
+        <div id="mtOffday" class="mtpanel">
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Offday Work Log</div><div class="ps" style="margin:0">Drivers dispatched on their weekly Offday — reviewed here so the team can grant a compensatory leave.</div></div>
+            <div class="tw" style="margin-top:12px"><table id="offdayLogTbl"><thead><tr><th>Date Worked</th><th>Weekday</th><th>Driver</th><th>Truck</th><th>Order ID</th><th>Qty (CFT)</th><th>Structure Type</th><th>Comp Leave Status</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -846,7 +854,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycby6GAyl78Hjh1Ucd9XXIiWs5aGP0H27gFdRy__2E3he684hk4EeYm2iJXpixEQ2oF6pBw/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwSoJ6ZVox0NE5yMbRW8U4qHkeB7qTyAc3EZsxeRfJjA1zujMl9nm6-Mug9PILsGEeAHA/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -1282,14 +1290,40 @@ function showMasterTab(id, btn) {
 
 async function loadMasterData() {
   try {
-    const [trucks, drivers, ddl] = await Promise.all([
+    const [trucks, drivers, ddl, offday] = await Promise.all([
       gs('getTruckMasterData', {token:ADMIN.token}),
       gs('getDriverMasterData', {token:ADMIN.token}),
-      gs('getDdlMasterData', {token:ADMIN.token})
+      gs('getDdlMasterData', {token:ADMIN.token}),
+      gs('getOffdayLogData', {token:ADMIN.token})
     ]);
-    MASTER.trucks=trucks||[]; MASTER.drivers=drivers||[]; MASTER.skus=(ddl&&ddl.skus)||[]; MASTER.clients=(ddl&&ddl.clients)||[];
-    renderTruckMaster(); renderDriverMaster(); renderDdlMaster();
+    MASTER.trucks=trucks||[]; MASTER.drivers=drivers||[]; MASTER.skus=(ddl&&ddl.skus)||[]; MASTER.clients=(ddl&&ddl.clients)||[]; MASTER.offday=offday||[];
+    renderTruckMaster(); renderDriverMaster(); renderDdlMaster(); renderOffdayLog();
   } catch(err) { toast(err.message, true); }
+}
+
+// ---- Offday Work Log ----
+function renderOffdayLog() {
+  const tbody=qs('offdayLogTbl').querySelector('tbody');
+  const statuses=['Pending','Approved','Compensated','Waived'];
+  tbody.innerHTML = (MASTER.offday||[]).length ? MASTER.offday.map(r=>`<tr data-row="${r.row}">
+    <td style="font-family:var(--mono);font-size:11px">${esc(r.dateWorked)}</td>
+    <td>${esc(r.weekday)}</td>
+    <td><b>${esc(r.driverName)}</b></td>
+    <td>${esc(r.truckNo)}</td>
+    <td><span style="color:var(--gold);font-family:var(--mono)">${esc(r.orderId)}</span></td>
+    <td>${bdtF(r.qty)}</td>
+    <td>${esc(r.structureType)}</td>
+    <td><select class="f-status">${statuses.map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td><button class="btn bs" style="padding:4px 9px;font-size:11px" onclick="withBusy(()=>saveOffdayStatus(${r.row}))">Save</button></td>
+  </tr>`).join('') : '<tr><td colspan="9" style="color:var(--dim)">No offday assignments logged yet.</td></tr>';
+}
+
+async function saveOffdayStatus(row) {
+  const tr = document.querySelector(`#offdayLogTbl tr[data-row="${row}"]`);
+  const status = tr.querySelector('.f-status').value;
+  MASTER.offday = await gs('updateOffdayLogStatus', {row, status, token: ADMIN.token});
+  renderOffdayLog();
+  toast('✓ Status updated.');
 }
 
 // ---- Truck Master ----
@@ -1757,24 +1791,45 @@ function buildCycleRows() {
   const o=(APP.activeOrders||[]).find(x=>x.orderId===qs('dcOrder').value);
   if(!o) return toast('Select an order first.',true);
 
-  const truckItems=(APP.availableTrucks||[]).map(t=>({value:t.no,label:`${t.no} (${t.cap} CFT)`,cap:t.cap}));
+  // Trucks: show EVERY truck on the Truck Master sheet — not just the
+  // currently-available (Active + not-busy) subset. Inactive or currently
+  // busy trucks stay in the list, just greyed out with a reason, so this
+  // picker always matches what's actually on the sheet instead of silently
+  // dropping rows a user can see on Truck Master but not here.
+  const busyTrkSet = new Set((APP.busyTrucks||[]).map(t=>String(t).trim()));
+  const truckItems=(APP.allTruckProfiles||APP.trucks||[]).map(t=>{
+    const status=String(t.status||'Active').trim();
+    let sub='', disabled=false;
+    if(status && status!=='Active'){ sub='inactive'; disabled=true; }
+    else if(busyTrkSet.has(String(t.truckNo).trim())){ sub='busy'; disabled=true; }
+    return {value:t.truckNo, label:`${t.truckNo} (${t.capacity} CFT)`, sub, disabled, cap:t.capacity};
+  });
 
-  const driverList = APP.allDrivers || APP.availableDrivers || [];
+  // Drivers: show EVERY driver on the Driver Master sheet — off-duty
+  // (Offday = today), non-TM (Pickup/Ravi pool), resting, and busy drivers
+  // are all shown greyed out with a clear reason, instead of being
+  // silently excluded the way the old on-duty-only list was.
   const ri2 = APP.driverRestInfo || {};
   const availDrvSet = new Set((APP.availableDrivers||[]).map(d=>String(d).trim()));
-  const profileMap = {};
-  (APP.driverProfiles||[]).forEach(p=>{ profileMap[p.name]=p; });
+  const todayWD = String(APP.todayWeekday||'').trim().toLowerCase();
   // Driver Name shown as "Name - Enroll" (e.g. "Ratul - 568858") when an
   // Enrollment No. is on file; falls back to the plain name otherwise.
-  const driverItems = driverList.map(d=>{
-    const name=String(d).trim();
-    const profile=profileMap[name];
-    const label=(profile&&profile.enroll) ? `${profile.name} - ${profile.enroll}` : name;
-    const rest=ri2[name], avail=availDrvSet.has(name);
-    let sub='', disabled=false;
-    if(rest){ sub=`rest ${rest.minLeft}m`; disabled=true; }
-    else if(!avail){ sub='busy'; disabled=true; }
-    return {value:name, label, sub, disabled};
+  // NOTE: an off-day driver is intentionally NOT disabled — they CAN be
+  // assigned (plants sometimes need to call someone in on their day off).
+  // The picker just flags it, and the backend automatically logs it to the
+  // Offday Work Log (Master Data → Offday Log) so the team can grant a
+  // compensatory leave later. Every other reason (non-TM pool, resting,
+  // already busy on another trip) still blocks selection outright.
+  const driverItems = (APP.allDriverProfiles||[]).map(p=>{
+    const name=String(p.name||'').trim();
+    const label=p.enroll ? `${name} - ${p.enroll}` : name;
+    const rest=ri2[name];
+    let sub='', disabled=false, isOffday=false;
+    if(String(p.truckType||'TM').trim().toUpperCase()!=='TM'){ sub='non-TM driver'; disabled=true; }
+    else if(p.offday && String(p.offday).trim().toLowerCase()===todayWD){ sub='off day — will log as comp. leave'; isOffday=true; }
+    else if(rest){ sub=`rest ${rest.minLeft}m`; disabled=true; }
+    else if(!availDrvSet.has(name)){ sub='busy'; disabled=true; }
+    return {value:name, label, sub, disabled, isOffday};
   });
 
   const castSuggestions=(APP.structureTypes||['Pump','Head Cast','Direct']).map(t=>`<option value="${esc(t)}">`).join('');
@@ -1794,15 +1849,20 @@ function buildCycleRows() {
   }
   qs('dcRows').innerHTML=html; qs('dcPanel').style.display='block';
 
-  // Wire up the searchable pickers, and auto-select an available truck per
-  // row (still fully editable — pick a different truck any time before
-  // submitting). Each row gets a distinct truck so rows don't collide.
+  // Wire up the searchable pickers, and auto-select an available (i.e. not
+  // disabled — Active and not busy) truck per row, still fully editable —
+  // pick a different truck any time before submitting. truckItems now
+  // includes every truck on the sheet (see above), so the auto-pick must
+  // skip disabled ones explicitly rather than just taking truckItems[i].
+  const pickableTrucks = truckItems.filter(t=>!t.disabled);
   for(let i=0;i<count;i++){
     const ssT = mountSearchSelect(qs(`crT_${i}`), truckItems, it=>{
       document.querySelector(`#cr_${i} .cq`).value = it.cap;
     });
-    mountSearchSelect(qs(`crD_${i}`), driverItems, ()=>{});
-    const autoTruck = truckItems[i];
+    mountSearchSelect(qs(`crD_${i}`), driverItems, it=>{
+      if(it.isOffday) toast('Note: '+it.label+' is off today — this trip will be logged for a compensatory leave.', true);
+    });
+    const autoTruck = pickableTrucks[i];
     if(autoTruck){
       ssT.setValue(autoTruck.value);
       document.querySelector(`#cr_${i} .cq`).value = autoTruck.cap;
