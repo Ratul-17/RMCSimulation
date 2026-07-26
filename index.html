@@ -9,6 +9,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{
   --ink:#0a0e1a;--ink2:#111827;--ink3:#1a2235;--ink4:#202d42;
@@ -722,6 +724,17 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
         <div id="repEmpty" style="color:var(--sub);font-size:13px;padding:30px 0;text-align:center">Pick a From/To date and click Run Report.</div>
         <div id="repResults" style="display:none">
           <div class="kg" id="repKpiRow" style="margin-top:15px"></div>
+
+          <div style="display:flex;gap:10px;margin:15px 0;flex-wrap:wrap">
+            <button class="btn bs admin-only" style="display:none" onclick="withBusy(fetchAiInsights)">&#129302; Generate AI Insights</button>
+            <button class="btn bp" onclick="withBusy(downloadReportPdf)">&#11015; Download PDF Report</button>
+          </div>
+
+          <div id="repAiBox" class="pn" style="display:none;margin-bottom:15px">
+            <div class="pnh"><div class="pnt">&#129302; AI Analysis &amp; Recommendations</div></div>
+            <div class="ai-text" style="font-size:13px;line-height:1.7;color:var(--sub);white-space:pre-wrap;padding:2px 4px 8px"></div>
+          </div>
+
           <div class="g3" style="margin-top:15px">
             <div class="pn"><div class="pnh"><div class="pnt">Status Breakdown</div></div><div class="pbg"><canvas id="cRepPie"></canvas></div></div>
             <div class="pn"><div class="pnh"><div class="pnt">Delivery Trend (Avg Cycle &amp; Qty)</div></div><div class="pbg"><canvas id="cRepTrend"></canvas></div></div>
@@ -833,7 +846,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbzP6KGU27y0scl096jt1H9qh2rVszwhb4fer1tO1Wpi4YMyWYyc6RYsjBl764ZGPqdlMw/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycby6GAyl78Hjh1Ucd9XXIiWs5aGP0H27gFdRy__2E3he684hk4EeYm2iJXpixEQ2oF6pBw/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -1091,6 +1104,7 @@ async function runReport() {
 
 function renderReport() {
   if (!REP) return;
+  qs('repAiBox').style.display='none'; // fresh report → any previous AI insight text no longer applies
   qs('repEmpty').style.display='none';
   qs('repResults').style.display='';
   const s=REP.summary||{};
@@ -1125,6 +1139,128 @@ function renderReport() {
   qs('repDriverTbl').querySelector('tbody').innerHTML = dd.length ? dd.map(r=>`<tr><td>${esc(r.driver)}</td><td>${r.trips}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim)">No data.</td></tr>';
   const cc=REP.topClients||[];
   qs('repClientTbl').querySelector('tbody').innerHTML = cc.length ? cc.map(r=>`<tr><td>${esc(r.client)}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="2" style="color:var(--dim)">No data.</td></tr>';
+}
+
+// ─────────────────────────────────────────────────────────────
+// REPORTS — AI Insights (Claude API, via backend) + PDF export
+// "Generate AI Insights" is admin-only (each click costs a real API call on
+// the backend), and its result is cached on REP.aiInsights so re-opening
+// the same report or downloading the PDF afterward doesn't re-call the API.
+// "Download PDF Report" is open to everyone — it always includes the KPIs,
+// charts, and tables; the AI section is included only if insights were
+// already generated (or, for a logged-in admin, are fetched on demand right
+// before the PDF is built). A non-admin's PDF simply omits that page.
+// ─────────────────────────────────────────────────────────────
+async function fetchAiInsights() {
+  if (!REP) throw new Error('Run a report first.');
+  const r = await gs('getAiReportInsights', {report: REP, token: ADMIN.token});
+  REP.aiInsights = r.insights;
+  renderAiInsights();
+  toast('&#10003; AI insights generated.');
+}
+
+function renderAiInsights() {
+  const box = qs('repAiBox');
+  if (!box) return;
+  if (REP && REP.aiInsights) {
+    box.style.display = 'block';
+    box.querySelector('.ai-text').textContent = REP.aiInsights;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+const REP_CHART_TITLES = { cRepPie: 'Status Breakdown', cRepTrend: 'Delivery Trend (Avg Cycle & Qty)', cRepUtil: 'Daywise Fleet / Cap Utilization %' };
+
+async function downloadReportPdf() {
+  if (!REP) { toast('Run a report first.', true); return; }
+
+  // Best-effort: if this admin hasn't generated AI insights for this report
+  // yet, try once now so the PDF includes them. A non-admin (or a missing
+  // API key) just means the PDF ships without that page — never block the
+  // download over it.
+  if (!REP.aiInsights && ADMIN.token) {
+    try { await fetchAiInsights(); } catch (err) { /* proceed without AI insights */ }
+  }
+
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { toast('PDF library failed to load — check your internet connection and reload.', true); return; }
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  let y = 44;
+
+  doc.setFontSize(16); doc.setFont(undefined, 'bold');
+  doc.text('ARMCL-01 — Fleet & Delivery Report', 40, y); y += 20;
+  doc.setFontSize(10); doc.setFont(undefined, 'normal');
+  doc.text(`Date Range: ${REP.range.from} to ${REP.range.to}  (${REP.range.days} day${REP.range.days===1?'':'s'})`, 40, y); y += 14;
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 40, y); y += 22;
+
+  // KPI table
+  const s = REP.summary || {};
+  doc.autoTable({
+    startY: y,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Total Trips', s.totalTrips], ['Total CFT', bdtF(s.totalCft)],
+      ['Fleet Util %', s.fleetUtilPct + '%'], ['Cap Util %', s.capUtilPct + '%'],
+      ['Active Trucks', s.activeTrucks], ['Daily Capacity (CFT)', bdtF(s.dailyCapCFT)],
+      ['Avg Transit (min)', s.avgTransit], ['Avg Wait (min)', s.avgWait],
+      ['Avg Unload (min)', s.avgUnload], ['Avg Cycle (min)', s.avgCycle],
+      ['SMV Efficiency %', s.smvEfficiency + '%']
+    ],
+    theme: 'grid', styles: { fontSize: 9 }, headStyles: { fillColor: [30, 39, 61] }, margin: { left: 40, right: 40 }
+  });
+  y = doc.lastAutoTable.finalY + 24;
+
+  // Charts (Chart.js canvases export straight to PNG via toDataURL — no
+  // extra screenshot library needed)
+  ['cRepPie', 'cRepTrend', 'cRepUtil'].forEach(id => {
+    const canvas = qs(id);
+    if (!canvas || !canvas.toDataURL) return;
+    if (y > pageH - 190) { doc.addPage(); y = 44; }
+    doc.setFontSize(11); doc.setFont(undefined, 'bold');
+    doc.text(REP_CHART_TITLES[id] || id, 40, y); y += 10;
+    try {
+      const img = canvas.toDataURL('image/png', 1.0);
+      doc.addImage(img, 'PNG', 40, y, 250, 150);
+    } catch (e) { /* canvas may be tainted/empty — skip it, keep going */ }
+    y += 165;
+  });
+
+  // Tables
+  doc.addPage(); y = 44;
+  doc.setFontSize(13); doc.setFont(undefined, 'bold');
+  doc.text('Truck Performance', 40, y); y += 8;
+  doc.autoTable({ startY: y, head: [['Truck', 'Trips', 'Qty (CFT)']], body: (REP.truckSummary || []).map(r => [r.truck, r.trips, bdtF(r.qty)]), theme: 'striped', styles: { fontSize: 8 }, margin: { left: 40, right: 40 } });
+  y = doc.lastAutoTable.finalY + 24;
+
+  if (y > pageH - 120) { doc.addPage(); y = 44; }
+  doc.setFontSize(13); doc.setFont(undefined, 'bold');
+  doc.text('Driver Performance', 40, y); y += 8;
+  doc.autoTable({ startY: y, head: [['Driver', 'Trips', 'Qty (CFT)']], body: (REP.driverSummary || []).map(r => [r.driver, r.trips, bdtF(r.qty)]), theme: 'striped', styles: { fontSize: 8 }, margin: { left: 40, right: 40 } });
+  y = doc.lastAutoTable.finalY + 24;
+
+  if (y > pageH - 120) { doc.addPage(); y = 44; }
+  doc.setFontSize(13); doc.setFont(undefined, 'bold');
+  doc.text('Top Clients', 40, y); y += 8;
+  doc.autoTable({ startY: y, head: [['Client', 'Qty (CFT)']], body: (REP.topClients || []).map(r => [r.client, bdtF(r.qty)]), theme: 'striped', styles: { fontSize: 8 }, margin: { left: 40, right: 40 } });
+
+  // AI Analysis page (only if we have it)
+  if (REP.aiInsights) {
+    doc.addPage(); y = 44;
+    doc.setFontSize(13); doc.setFont(undefined, 'bold');
+    doc.text('AI Analysis & Recommendations', 40, y); y += 20;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    const lines = doc.splitTextToSize(REP.aiInsights, pageW - 80);
+    lines.forEach(line => {
+      if (y > pageH - 40) { doc.addPage(); y = 44; }
+      doc.text(line, 40, y); y += 13;
+    });
+  }
+
+  doc.save(`ARMCL01_Report_${REP.range.from}_to_${REP.range.to}.pdf`);
+  toast('&#10003; PDF downloaded.');
 }
 
 // ─────────────────────────────────────────────────────────────
