@@ -220,6 +220,22 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 .leaflet-control-attribution{background:rgba(10,14,26,.8)!important;color:var(--dim)!important;font-size:10px!important}
 
 
+/* ── MASTER DATA ───────────────── */
+.mtpanel{display:none}
+.mtpanel.on{display:block}
+.mstab{opacity:.7}
+.mstab.on{opacity:1}
+#truckMasterTbl input,#driverMasterTbl input,#skuMasterTbl input,#clientMasterTbl input,
+#truckMasterTbl select,#driverMasterTbl select{width:100%;background:var(--ink3);border:1px solid var(--edge);border-radius:6px;padding:5px 7px;color:var(--text);font-size:12px}
+
+/* ── BUSY / PROCESSING OVERLAY ───────────────── */
+.busy-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:none;align-items:center;justify-content:center}
+.busy-box{background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:28px 38px;display:flex;flex-direction:column;align-items:center;gap:14px;min-width:230px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.busy-spin{width:34px;height:34px;border:3px solid var(--edge);border-top-color:var(--gold);border-radius:50%;animation:busy-spin-anim .8s linear infinite}
+.busy-spin.done{animation:none;border-top-color:var(--green,#2dd4a0);border-color:var(--green,#2dd4a0)}
+@keyframes busy-spin-anim{to{transform:rotate(360deg)}}
+.busy-text{font-size:14px;font-weight:700;color:var(--text);text-align:center}
+
 /* ── ADMIN LOGIN MODAL ───────────────── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;display:flex;align-items:center;justify-content:center}
 .modal-box{width:100%;max-width:360px;background:var(--ink2);border:1px solid var(--edge);border-radius:var(--rL);padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
@@ -356,6 +372,13 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
   </div>
 </div>
 
+<div id="busyOverlay" class="busy-overlay">
+  <div class="busy-box">
+    <div class="busy-spin" id="busySpin"></div>
+    <div class="busy-text" id="busyText">অনুগ্রহ করে অপেক্ষা করুন...</div>
+  </div>
+</div>
+
 <div class="body">
 
   <nav class="sb" id="sb">
@@ -370,6 +393,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
       <button class="nb" onclick="showTab('dispatch',this)"><span class="ni">&#128260;</span>Dispatch Cycles</button>
       <button class="nb" onclick="showTab('ops',this)"><span class="ni">&#9889;</span>Operations Console</button>
       <button class="nb" onclick="showTab('formlog',this)"><span class="ni">&#128221;</span>Driver Form Log</button>
+      <button class="nb" onclick="showTab('master',this)"><span class="ni">&#128737;</span>Master Data</button>
     </div>
     <div class="sb-sec">
       <div class="sb-lbl">System</div>
@@ -517,7 +541,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
                 </div>
                 <div style="margin-top:8px;padding:8px 12px;background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.2);border-radius:var(--r);font-size:11px;color:var(--red);display:none" id="simWarning"></div>
               </div>
-              <button class="btn bg" onclick="saveMasterOrder()" style="margin-top:14px">&#10003; Step 2: Save Master Order</button>
+              <button class="btn bg" onclick="withBusy(saveMasterOrder)" style="margin-top:14px">&#10003; Step 2: Save Master Order</button>
             </div>
           </div>
         </div>
@@ -545,7 +569,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
           <div class="pn" id="dcPanel" style="display:none;border-color:var(--gold)">
             <div class="pnh"><div class="pnt">Assign Trucks &amp; Drivers</div><span class="tg twa">Available only</span></div>
             <div id="dcRows"></div>
-            <button class="btn bg" onclick="submitCycle()" style="margin-top:13px">&#128640; Dispatch This Cycle</button>
+            <button class="btn bg" onclick="withBusy(submitCycle)" style="margin-top:13px">&#128640; Dispatch This Cycle</button>
           </div>
         </div>
         <div class="pn">
@@ -576,7 +600,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             <div id="iiDistWrap" style="display:none;margin-bottom:14px">
               <div class="fi"><label>Total Distance Covered (km)</label><input id="iiDist" type="number" placeholder="Required for Factory Return"></div>
             </div>
-            <button class="btn bp" onclick="submitOps()">Submit to Centralized Data</button>
+            <button class="btn bp" onclick="withBusy(submitOps)">Submit to Centralized Data</button>
           </div>
           <div class="pn">
             <div class="pnh"><div class="pnt">Workflow Guide</div></div>
@@ -731,7 +755,71 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             <div class="fi"><label>Contingency %</label><input id="stCon" type="number"></div>
             <div class="fi"><label>Load Buffer Min</label><input id="stLBuf" type="number"></div>
             <div class="fi"><label>Unload Buffer Min</label><input id="stUBuf" type="number"></div>
-            <div class="fi" style="align-self:end"><button class="btn bp" onclick="saveCfg()">Save Settings</button></div>
+            <div class="fi" style="align-self:end"><button class="btn bp" onclick="withBusy(saveCfg)">Save Settings</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="master" class="sec">
+        <div class="ph">
+          <div><div class="pt">Master Data</div><div class="ps">Add, edit, or remove Truck Master, Driver Master, and Client/SKU records — every change saves directly back to the sheets.</div></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <button class="btn bp mstab on" data-mt="mtTruck" onclick="showMasterTab('mtTruck',this)">Truck Master</button>
+          <button class="btn bs mstab" data-mt="mtDriver" onclick="showMasterTab('mtDriver',this)">Driver Master</button>
+          <button class="btn bs mstab" data-mt="mtDdl" onclick="showMasterTab('mtDdl',this)">Client &amp; SKU</button>
+        </div>
+
+        <div id="mtTruck" class="mtpanel on">
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Truck Master</div><button class="btn bp" onclick="withBusy(()=>saveTruckRow(null))">&#10003; Add New Truck</button></div>
+            <div class="fg2b" id="truckAddForm">
+              <div class="fi"><label>Truck Number</label><input id="taTruckNumber" placeholder="e.g. DMS 11-4879"></div>
+              <div class="fi"><label>Driver Name</label><input id="taDriverName"></div>
+              <div class="fi"><label>Driver Phone</label><input id="taDriverPhone"></div>
+              <div class="fi"><label>Capacity (CFT)</label><input id="taCapacity" type="number" value="247"></div>
+              <div class="fi"><label>Truck Type</label><input id="taTruckType" value="RMC Mixer"></div>
+              <div class="fi"><label>Registration No.</label><input id="taRegNo"></div>
+              <div class="fi"><label>Status</label><select id="taStatus"><option>Active</option><option>Inactive</option></select></div>
+              <div class="fi"><label>Remarks</label><input id="taRemarks"></div>
+            </div>
+            <div class="tw" style="margin-top:12px"><table id="truckMasterTbl"><thead><tr><th>#</th><th>Truck Number</th><th>Driver Name</th><th>Driver Phone</th><th>Capacity</th><th>Truck Type</th><th>Registration No.</th><th>Status</th><th>Remarks</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+          </div>
+        </div>
+
+        <div id="mtDriver" class="mtpanel">
+          <div class="pn">
+            <div class="pnh"><div class="pnt">Driver Master</div><button class="btn bp" onclick="withBusy(()=>saveDriverRow(null))">&#10003; Add New Driver</button></div>
+            <div class="fg2b" id="driverAddForm">
+              <div class="fi"><label>Name</label><input id="daName"></div>
+              <div class="fi"><label>Enroll</label><input id="daEnroll"></div>
+              <div class="fi"><label>Offday</label><select id="daOffday"><option value="">— None —</option><option>Saturday</option><option>Sunday</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select></div>
+              <div class="fi"><label>Truck No</label><input id="daTruckNo"></div>
+              <div class="fi"><label>Truck Type</label><select id="daTruckType"><option>TM</option><option>Pickup/Ravi</option></select></div>
+            </div>
+            <div class="tw" style="margin-top:12px"><table id="driverMasterTbl"><thead><tr><th>Name</th><th>Enroll</th><th>Offday</th><th>Truck No</th><th>Truck Type</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+          </div>
+        </div>
+
+        <div id="mtDdl" class="mtpanel">
+          <div class="g2">
+            <div class="pn">
+              <div class="pnh"><div class="pnt">SKU List</div></div>
+              <div class="fg2b" style="grid-template-columns:1fr auto">
+                <div class="fi"><label>New SKU</label><input id="daSkuVal" placeholder="e.g. RM 4500 PSI(PCC) - D"></div>
+                <div class="fi" style="align-self:end"><button class="btn bp" onclick="withBusy(()=>saveSkuRow(null))">&#10003; Add</button></div>
+              </div>
+              <div class="tw" style="margin-top:12px"><table id="skuMasterTbl"><thead><tr><th>SKU</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
+            <div class="pn">
+              <div class="pnh"><div class="pnt">Client &amp; Address List</div></div>
+              <div class="fg2b">
+                <div class="fi"><label>New Client Name</label><input id="daClientVal"></div>
+                <div class="fi"><label>Address</label><input id="daAddressVal"></div>
+                <div class="fi" style="align-self:end"><button class="btn bp" onclick="withBusy(()=>saveClientRow(null))">&#10003; Add</button></div>
+              </div>
+              <div class="tw" style="margin-top:12px"><table id="clientMasterTbl"><thead><tr><th>Client</th><th>Address</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
           </div>
         </div>
       </div>
@@ -745,13 +833,45 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbwr4Bmgz5GPLjhIfEnF3mqHay49zBqKdrPTXLxbgQuOZe7gh6Nkb8zaeCwzGzwz42c0yQ/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbzP6KGU27y0scl096jt1H9qh2rVszwhb4fer1tO1Wpi4YMyWYyc6RYsjBl764ZGPqdlMw/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
 let APP = {}, OMAP = null, RLAYER = null, DMKR = null, CALC = {}, CH = {}, CAP = {token:null, vals:{}};
 let ADMIN = {token:null}, REP = null;
-const ADMIN_GATED_TABS = ['order','dispatch','ops','cfg','formlog'];
+const ADMIN_GATED_TABS = ['order','dispatch','ops','cfg','formlog','master'];
+
+// ─────────────────────────────────────────────────────────────
+// BUSY / PROCESSING OVERLAY — prevents duplicate-submit double clicks.
+// Wrap any submit handler as withBusy(fn): while fn() is in flight a
+// full-screen "অনুগ্রহ করে অপেক্ষা করুন" (please wait) overlay blocks further
+// clicks; on success it flashes "✓ সম্পন্ন হয়েছে (Completed)" briefly before
+// closing; on failure it just closes (the failing call's own toast, or the
+// generic one below, already told the user what went wrong).
+// ─────────────────────────────────────────────────────────────
+let BUSY = false;
+function setBusy(text, done) {
+  qs('busyText').textContent = text;
+  qs('busySpin').classList.toggle('done', !!done);
+  qs('busyOverlay').style.display = 'flex';
+}
+function clearBusy() { qs('busyOverlay').style.display = 'none'; }
+
+async function withBusy(fn) {
+  if (BUSY) return;
+  BUSY = true;
+  setBusy('অনুগ্রহ করে অপেক্ষা করুন...', false);
+  try {
+    await fn();
+    setBusy('✓ সম্পন্ন হয়েছে (Completed)', true);
+    await new Promise(r => setTimeout(r, 650));
+  } catch (err) {
+    if (err && err.message && !err._toasted) toast(err.message, true);
+  } finally {
+    clearBusy();
+    BUSY = false;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // UTILS
@@ -891,6 +1011,7 @@ function showTab(id, btn) {
   if (id==='formlog') refreshFormLog();
   if (id==='sim18') loadSim18();
   if (id==='capacity') openCapacitySection();
+  if (id==='master') loadMasterData();
   qs('mainEl').scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -1004,6 +1125,180 @@ function renderReport() {
   qs('repDriverTbl').querySelector('tbody').innerHTML = dd.length ? dd.map(r=>`<tr><td>${esc(r.driver)}</td><td>${r.trips}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim)">No data.</td></tr>';
   const cc=REP.topClients||[];
   qs('repClientTbl').querySelector('tbody').innerHTML = cc.length ? cc.map(r=>`<tr><td>${esc(r.client)}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="2" style="color:var(--dim)">No data.</td></tr>';
+}
+
+// ─────────────────────────────────────────────────────────────
+// MASTER DATA — Truck Master / Driver Master / DDL (SKU + Client&Address)
+// Admin-only editable tables: each existing row renders as inline inputs
+// with Save/Delete; a small form above each table adds a new row. Every
+// Save/Delete round-trips to the sheet immediately (through withBusy, so a
+// double-click can't fire the same write twice) and re-renders from the
+// server's fresh copy of that dataset.
+// ─────────────────────────────────────────────────────────────
+let MASTER = {trucks:[], drivers:[], skus:[], clients:[]};
+
+function showMasterTab(id, btn) {
+  document.querySelectorAll('.mtpanel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.mstab').forEach(b=>b.classList.remove('on'));
+  qs(id).classList.add('on');
+  if (btn) btn.classList.add('on');
+}
+
+async function loadMasterData() {
+  try {
+    const [trucks, drivers, ddl] = await Promise.all([
+      gs('getTruckMasterData', {token:ADMIN.token}),
+      gs('getDriverMasterData', {token:ADMIN.token}),
+      gs('getDdlMasterData', {token:ADMIN.token})
+    ]);
+    MASTER.trucks=trucks||[]; MASTER.drivers=drivers||[]; MASTER.skus=(ddl&&ddl.skus)||[]; MASTER.clients=(ddl&&ddl.clients)||[];
+    renderTruckMaster(); renderDriverMaster(); renderDdlMaster();
+  } catch(err) { toast(err.message, true); }
+}
+
+// ---- Truck Master ----
+function renderTruckMaster() {
+  const tbody=qs('truckMasterTbl').querySelector('tbody');
+  tbody.innerHTML = MASTER.trucks.length ? MASTER.trucks.map(r=>`<tr data-row="${r.row}">
+    <td>${esc(r.num)}</td>
+    <td><input class="f-truckNumber" value="${esc(r.truckNumber)}"></td>
+    <td><input class="f-driverName" value="${esc(r.driverName)}"></td>
+    <td><input class="f-driverPhone" value="${esc(r.driverPhone)}"></td>
+    <td><input class="f-capacity" type="number" value="${esc(r.capacity)}"></td>
+    <td><input class="f-truckType" value="${esc(r.truckType)}"></td>
+    <td><input class="f-regNo" value="${esc(r.regNo)}"></td>
+    <td><select class="f-status"><option ${r.status==='Active'?'selected':''}>Active</option><option ${r.status==='Inactive'?'selected':''}>Inactive</option></select></td>
+    <td><input class="f-remarks" value="${esc(r.remarks)}"></td>
+    <td style="white-space:nowrap"><button class="btn bs" style="padding:4px 9px;font-size:11px" onclick="withBusy(()=>saveTruckRow(${r.row}))">Save</button> <button class="btn bs" style="padding:4px 9px;font-size:11px;color:#f06060" onclick="confirmDeleteTruck(${r.row})">Delete</button></td>
+  </tr>`).join('') : '<tr><td colspan="10" style="color:var(--dim)">No trucks yet.</td></tr>';
+}
+
+async function saveTruckRow(row) {
+  let payload;
+  if (row) {
+    const tr = document.querySelector(`#truckMasterTbl tr[data-row="${row}"]`);
+    payload = {
+      row,
+      truckNumber: tr.querySelector('.f-truckNumber').value, driverName: tr.querySelector('.f-driverName').value,
+      driverPhone: tr.querySelector('.f-driverPhone').value, capacity: tr.querySelector('.f-capacity').value,
+      truckType: tr.querySelector('.f-truckType').value, regNo: tr.querySelector('.f-regNo').value,
+      status: tr.querySelector('.f-status').value, remarks: tr.querySelector('.f-remarks').value, token: ADMIN.token
+    };
+  } else {
+    payload = {
+      truckNumber: qs('taTruckNumber').value, driverName: qs('taDriverName').value, driverPhone: qs('taDriverPhone').value,
+      capacity: qs('taCapacity').value, truckType: qs('taTruckType').value, regNo: qs('taRegNo').value,
+      status: qs('taStatus').value, remarks: qs('taRemarks').value, token: ADMIN.token
+    };
+  }
+  if (!String(payload.truckNumber||'').trim()) throw new Error('Truck Number is required.');
+  MASTER.trucks = await gs('saveTruckMasterRow', payload);
+  renderTruckMaster();
+  toast(row ? '✓ Truck updated.' : '✓ Truck added.');
+  if (!row) { ['taTruckNumber','taDriverName','taDriverPhone','taRegNo','taRemarks'].forEach(id=>qs(id).value=''); }
+}
+
+function confirmDeleteTruck(row) { if (confirm('Delete this truck record? This cannot be undone.')) withBusy(()=>deleteTruckRow(row)); }
+async function deleteTruckRow(row) {
+  MASTER.trucks = await gs('deleteTruckMasterRow', {row, token:ADMIN.token});
+  renderTruckMaster();
+  toast('✓ Truck deleted.');
+}
+
+// ---- Driver Master ----
+function renderDriverMaster() {
+  const tbody=qs('driverMasterTbl').querySelector('tbody');
+  const days=['','Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday'];
+  tbody.innerHTML = MASTER.drivers.length ? MASTER.drivers.map(r=>`<tr data-row="${r.row}">
+    <td><input class="f-name" value="${esc(r.name)}"></td>
+    <td><input class="f-enroll" value="${esc(r.enroll)}"></td>
+    <td><select class="f-offday">${days.map(d=>`<option ${String(r.offday).trim()===d?'selected':''}>${d||'— None —'}</option>`).join('')}</select></td>
+    <td><input class="f-truckNo" value="${esc(r.truckNo)}"></td>
+    <td><select class="f-truckType"><option ${r.truckType==='TM'?'selected':''}>TM</option><option ${r.truckType==='Pickup/Ravi'?'selected':''}>Pickup/Ravi</option></select></td>
+    <td style="white-space:nowrap"><button class="btn bs" style="padding:4px 9px;font-size:11px" onclick="withBusy(()=>saveDriverRow(${r.row}))">Save</button> <button class="btn bs" style="padding:4px 9px;font-size:11px;color:#f06060" onclick="confirmDeleteDriver(${r.row})">Delete</button></td>
+  </tr>`).join('') : '<tr><td colspan="6" style="color:var(--dim)">No drivers yet.</td></tr>';
+}
+
+async function saveDriverRow(row) {
+  let payload;
+  if (row) {
+    const tr = document.querySelector(`#driverMasterTbl tr[data-row="${row}"]`);
+    const offVal = tr.querySelector('.f-offday').value;
+    payload = {
+      row, name: tr.querySelector('.f-name').value, enroll: tr.querySelector('.f-enroll').value,
+      offday: offVal==='— None —' ? '' : offVal, truckNo: tr.querySelector('.f-truckNo').value,
+      truckType: tr.querySelector('.f-truckType').value, token: ADMIN.token
+    };
+  } else {
+    const offVal = qs('daOffday').value;
+    payload = { name: qs('daName').value, enroll: qs('daEnroll').value, offday: offVal, truckNo: qs('daTruckNo').value, truckType: qs('daTruckType').value, token: ADMIN.token };
+  }
+  if (!String(payload.name||'').trim()) throw new Error('Driver Name is required.');
+  MASTER.drivers = await gs('saveDriverMasterRow', payload);
+  renderDriverMaster();
+  toast(row ? '✓ Driver updated.' : '✓ Driver added.');
+  if (!row) { qs('daName').value=''; qs('daEnroll').value=''; qs('daTruckNo').value=''; qs('daOffday').value=''; }
+}
+
+function confirmDeleteDriver(row) { if (confirm('Delete this driver record? This cannot be undone.')) withBusy(()=>deleteDriverRow(row)); }
+async function deleteDriverRow(row) {
+  MASTER.drivers = await gs('deleteDriverMasterRow', {row, token:ADMIN.token});
+  renderDriverMaster();
+  toast('✓ Driver deleted.');
+}
+
+// ---- DDL: SKU list + Client&Address list ----
+function renderDdlMaster() {
+  const skuBody=qs('skuMasterTbl').querySelector('tbody');
+  skuBody.innerHTML = MASTER.skus.length ? MASTER.skus.map(r=>`<tr data-row="${r.row}">
+    <td><input class="f-sku" value="${esc(r.value)}"></td>
+    <td style="white-space:nowrap"><button class="btn bs" style="padding:4px 9px;font-size:11px" onclick="withBusy(()=>saveSkuRow(${r.row}))">Save</button> <button class="btn bs" style="padding:4px 9px;font-size:11px;color:#f06060" onclick="confirmDeleteSku(${r.row})">Delete</button></td>
+  </tr>`).join('') : '<tr><td colspan="2" style="color:var(--dim)">No SKUs yet.</td></tr>';
+
+  const clientBody=qs('clientMasterTbl').querySelector('tbody');
+  clientBody.innerHTML = MASTER.clients.length ? MASTER.clients.map(r=>`<tr data-row="${r.row}">
+    <td><input class="f-client" value="${esc(r.client)}"></td>
+    <td><input class="f-address" value="${esc(r.address)}"></td>
+    <td style="white-space:nowrap"><button class="btn bs" style="padding:4px 9px;font-size:11px" onclick="withBusy(()=>saveClientRow(${r.row}))">Save</button> <button class="btn bs" style="padding:4px 9px;font-size:11px;color:#f06060" onclick="confirmDeleteClient(${r.row})">Delete</button></td>
+  </tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim)">No clients yet.</td></tr>';
+}
+
+async function saveSkuRow(row) {
+  let value;
+  if (row) { value = document.querySelector(`#skuMasterTbl tr[data-row="${row}"] .f-sku`).value; }
+  else { value = qs('daSkuVal').value; }
+  if (!String(value||'').trim()) throw new Error('SKU value is required.');
+  MASTER.skus = (await gs('saveDdlSku', {row, value, token:ADMIN.token})).skus;
+  renderDdlMaster();
+  toast(row ? '✓ SKU updated.' : '✓ SKU added.');
+  if (!row) qs('daSkuVal').value='';
+}
+function confirmDeleteSku(row) { if (confirm('Delete this SKU? This cannot be undone.')) withBusy(()=>deleteSkuRow(row)); }
+async function deleteSkuRow(row) {
+  MASTER.skus = (await gs('deleteDdlSku', {row, token:ADMIN.token})).skus;
+  renderDdlMaster();
+  toast('✓ SKU deleted.');
+}
+
+async function saveClientRow(row) {
+  let client, address;
+  if (row) {
+    const tr = document.querySelector(`#clientMasterTbl tr[data-row="${row}"]`);
+    client = tr.querySelector('.f-client').value; address = tr.querySelector('.f-address').value;
+  } else {
+    client = qs('daClientVal').value; address = qs('daAddressVal').value;
+  }
+  if (!String(client||'').trim()) throw new Error('Client Name is required.');
+  MASTER.clients = (await gs('saveDdlClient', {row, client, address, token:ADMIN.token})).clients;
+  renderDdlMaster();
+  toast(row ? '✓ Client updated.' : '✓ Client added.');
+  if (!row) { qs('daClientVal').value=''; qs('daAddressVal').value=''; }
+}
+function confirmDeleteClient(row) { if (confirm('Delete this client? This cannot be undone.')) withBusy(()=>deleteClientRow(row)); }
+async function deleteClientRow(row) {
+  MASTER.clients = (await gs('deleteDdlClient', {row, token:ADMIN.token})).clients;
+  renderDdlMaster();
+  toast('✓ Client deleted.');
 }
 
 function initDates() {
@@ -1256,7 +1551,7 @@ async function saveMasterOrder() {
     if(qs('ocSales')) qs('ocSales').value='';
     if(qs('ocEngineer')) qs('ocEngineer').value='';
     if(qs('ocPumpCount')) qs('ocPumpCount').value='';
-  } catch(err){ toast(err.message,true); }
+  } catch(err){ toast(err.message,true); err._toasted=true; throw err; }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1399,7 +1694,7 @@ async function submitCycle() {
     APP=res.data; buildDropdowns(); renderDashboard();
     toast('&#128640; Cycle dispatched!');
     qs('dcPanel').style.display='none'; qs('dcStats').style.display='none'; qs('dcOrder').value='';
-  }catch(err){toast(err.message,true);}
+  }catch(err){toast(err.message,true); err._toasted=true; throw err;}
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1415,7 +1710,7 @@ async function submitOps() {
     const res=await gs('saveInstantEvent',{rowNo,event:qs('iiEv').value,date:qs('iiDate').value,time:qs('iiTime').value,distanceKm:qs('iiDist').value,token:ADMIN.token});
     APP=res.data; buildDropdowns(); renderDashboard();
     toast('&#10003; Status updated!'); qs('iiDist').value='';
-  }catch(err){toast(err.message,true);}
+  }catch(err){toast(err.message,true); err._toasted=true; throw err;}
 }
 
 
@@ -1562,7 +1857,7 @@ async function saveCapAssumptions() {
 async function saveCfg() {
   const p={truckCapacity:qs('stCap').value,avgSpeedKmph:qs('stSpd').value,fixedTripBDT:qs('stFix').value,perKmBDT:qs('stKm').value,pumpChargeBDT:qs('stPmp').value,loadingChargeBDT:qs('stLd').value,unloadingChargeBDT:qs('stUl').value,idleCostPerHourBDT:qs('stIdl').value,contingencyPct:qs('stCon').value,loadingBufferMin:qs('stLBuf').value,unloadingBufferMin:qs('stUBuf').value,token:ADMIN.token};
   try{APP=await gs('saveCostSettings',p);buildDropdowns();renderDashboard();toast('&#10003; Settings saved.');}
-  catch(err){toast(err.message,true);}
+  catch(err){toast(err.message,true); err._toasted=true; throw err;}
 }
 
 // ─────────────────────────────────────────────────────────────
