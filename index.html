@@ -169,6 +169,17 @@ tbody tr:hover td{background:rgba(52,209,192,.03)}
 /* ── ASSIGN ROWS ──────────────────────── */
 .ar{display:grid;grid-template-columns:1.2fr 1.2fr .7fr .8fr;gap:10px;padding:13px;background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);margin-bottom:9px;align-items:end}
 
+/* ── SEARCHABLE SELECT (truck / driver pickers) ──────────── */
+.ss-wrap{position:relative}
+.ss-wrap input.ss-input{cursor:text}
+.ss-list{position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:220px;overflow-y:auto;background:var(--ink2);border:1px solid var(--edge2);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:80;display:none}
+.ss-list.open{display:block}
+.ss-item{padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.ss-item:hover,.ss-item.hi{background:var(--ink3);color:var(--gold)}
+.ss-item .ss-tag{font-size:10.5px;color:var(--sub);white-space:nowrap}
+.ss-item.disabled{opacity:.45;cursor:not-allowed}
+.ss-empty{padding:9px 12px;font-size:12px;color:var(--sub)}
+
 /* ── STAT CARDS ───────────────────────── */
 .sr{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
 .sc{background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:13px}
@@ -367,7 +378,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             <div class="pnh"><div class="pnt">Fleet Utilization</div><span class="pbg" id="fBadge">&#8212;</span></div>
             <div class="fg" id="fleetMini"></div>
             <div class="g2e" style="margin-top:13px">
-              <div class="cb"><canvas id="cUtil"></canvas></div>
+              <div class="cb"><div style="font-size:10.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Daywise Utilization Trend</div><canvas id="cUtil"></canvas></div>
               <div class="cb"><canvas id="cTruck"></canvas></div>
             </div>
           </div>
@@ -400,7 +411,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <div class="fi" id="ocPumpCountWrap" style="display:none"><label>No. of Pumps</label><input id="ocPumpCount" type="number" min="1" step="1" placeholder="e.g. 2"></div>
               <div class="fi"><label>Target Date</label><input id="ocDate" type="date"></div>
               <div class="fi"><label>Target Time</label><input id="ocTime" type="time"></div>
-              <div class="fi"><label>Structure Type</label><select id="ocCastType"><option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option></select></div>
+              <div class="fi"><label>Structure Type</label><input id="ocCastType" type="text" list="ocCastTypeList" placeholder="e.g. Pump" value="Pump"><datalist id="ocCastTypeList"></datalist></div>
               <div class="fi"><label>Casting Start Time (UL Start Anchor) <span style="color:var(--cyan);font-weight:400;text-transform:none">— truck 1 UL start</span></label><input id="ocCastTime" type="time" placeholder="e.g. 09:00"></div>
               <div class="fi"><label>Distance Override (km) &mdash; optional</label><input id="ocOvr" type="number" placeholder="Leave blank for auto"></div>
               <div class="fi"><label>Sales Person Name</label><select id="ocSales"><option value="">Select sales person...</option></select></div>
@@ -526,11 +537,11 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             <div class="fi" style="margin-bottom:13px"><label>1. Select Active Trip</label><select id="iiTrip"><option value="">Loading...</option></select></div>
             <div class="fi" style="margin-bottom:13px"><label>2. Event / Status</label>
               <select id="iiEv">
-                <option value="factory_out">&#127981; Factory Out &#8212; Leaves Plant</option>
-                <option value="arrival">&#128205; Client Arrival &#8212; Reaches Site</option>
-                <option value="ul_start">&#11015; Unloading Start</option>
-                <option value="ul_end">&#9989; Unloading Complete</option>
-                <option value="return">&#8617; Factory Return &#8212; Available Again</option>
+                <option value="factory_out">&#127981; Factory Out &#8212; Leaves Plant (কারখানা থেকে বের হয়েছি)</option>
+                <option value="arrival">&#128205; Client Arrival &#8212; Reaches Site (ক্লায়েন্ট সাইটে পৌঁছেছি)</option>
+                <option value="ul_start">&#11015; Unloading Start (আনলোডিং শুরু)</option>
+                <option value="ul_end">&#9989; Unloading Complete (আনলোডিং শেষ)</option>
+                <option value="return">&#8617; Factory Return &#8212; Available Again (কারখানায় ফিরে এসেছি)</option>
               </select>
             </div>
             <div class="fg2b" style="margin-bottom:13px">
@@ -681,7 +692,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbxs4zBKNYjifpjzlUH0nT3OtmHERWOpyXoSKqRefE-kuRKJEGJFJNfFAbPfZhBTdRXYjw/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbzYbzsjd2r3aGK-ZobvadQ0tq_pLQZy6GdfRiZVWQUlAi2CrO2HUMcnSPXi01YOd0-JZg/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -844,8 +855,12 @@ function buildDropdowns() {
   if(qs('ocClient')) qs('ocClient').innerHTML='<option value="">Select client...</option>'+(APP.clients||[]).map(s).join('');
   if(qs('ocSku'))    qs('ocSku').innerHTML   ='<option value="">Select SKU...</option>'  +(APP.skus||[]).map(s).join('');
   if(qs('ocSales'))  qs('ocSales').innerHTML ='<option value="">Select sales person...</option>'+(APP.salesPersons||[]).map(s).join('');
-  if(qs('ocCastType') && (APP.structureTypes||[]).length) {
-    qs('ocCastType').innerHTML = (APP.structureTypes||[]).map(t=>`<option value="${esc(t)}">${structureIcon(t)} ${esc(t)}</option>`).join('');
+  if(qs('ocCastTypeList')) {
+    // Structure Type is a free-text field (per user request — no forced dropdown).
+    // The datalist just offers the known DDL structure types as type-ahead
+    // suggestions; any value the user types is accepted as-is.
+    qs('ocCastTypeList').innerHTML = (APP.structureTypes||[]).map(t=>`<option value="${esc(t)}">`).join('');
+    if(qs('ocCastType') && !qs('ocCastType').value) qs('ocCastType').value = (APP.structureTypes||[])[0] || 'Pump';
   }
   if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
   if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
@@ -921,7 +936,7 @@ function renderDashboard() {
   if(qs('cPie')&&ch.statusPie)CH.cPie=new Chart(qs('cPie'),{type:'doughnut',data:{labels:Object.keys(ch.statusPie),datasets:[{data:Object.values(ch.statusPie),backgroundColor:['#60a5fa','#f5a623','#34d1c0','#2dd4a0','#a78bfa','#f06060'],borderWidth:0,hoverOffset:5}]},options:{...cOpt,cutout:'68%'}});
   if(qs('cTrend')&&ch.trendLine)CH.cTrend=new Chart(qs('cTrend'),{type:'line',data:{labels:ch.trendLine.labels||[],datasets:[{label:'Avg Cycle (min)',data:ch.trendLine.cycleVals||[],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.1)',tension:.4,fill:true,pointRadius:3},{label:'Qty CFT',data:ch.trendLine.qtyVals||[],borderColor:'#34d1c0',backgroundColor:'rgba(52,209,192,.1)',tension:.4,fill:true,pointRadius:3}]},options:{...cOpt,scales:ax()}});
   if(qs('cClient')&&ch.clientBar)CH.cClient=new Chart(qs('cClient'),{type:'bar',data:{labels:ch.clientBar.labels||[],datasets:[{label:'Qty Delivered',data:ch.clientBar.qtyVals||[],backgroundColor:'rgba(52,209,192,.12)',borderColor:'#34d1c0',borderWidth:1,borderRadius:4}]},options:{...cOpt,scales:ax()}});
-  if(qs('cUtil')&&ch.utilLine)CH.cUtil=new Chart(qs('cUtil'),{type:'line',data:{labels:ch.utilLine.labels||[],datasets:[{label:'Fleet Util %',data:ch.utilLine.utilVals||[],borderColor:'#2dd4a0',backgroundColor:'rgba(45,212,160,.1)',tension:.4,fill:true,pointRadius:3}]},options:{...cOpt,scales:ax()}});
+  if(qs('cUtil')&&ch.utilLine)CH.cUtil=new Chart(qs('cUtil'),{type:'line',data:{labels:ch.utilLine.labels||[],datasets:[{label:'Fleet Util %',data:ch.utilLine.utilVals||[],borderColor:'#2dd4a0',backgroundColor:'rgba(45,212,160,.1)',tension:.4,fill:true,pointRadius:3},{label:'Cap Util %',data:ch.utilLine.capUtilVals||[],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.08)',tension:.4,fill:true,pointRadius:3}]},options:{...cOpt,scales:ax()}});
   if(qs('cTruck')&&ch.truckBar)CH.cTruck=new Chart(qs('cTruck'),{type:'bar',data:{labels:ch.truckBar.labels||[],datasets:[{label:'Trips',data:ch.truckBar.trips||[],backgroundColor:'rgba(245,166,35,.12)',borderColor:'#f5a623',borderWidth:1,borderRadius:4}]},options:{...cOpt,scales:ax(),indexAxis:'y'}});
 
   // Settings
@@ -1081,39 +1096,112 @@ if(qs('dcOrder')) qs('dcOrder').addEventListener('change', e => {
   qs('dcStats').style.display='block';
 });
 
+// ── Generic searchable dropdown (used for Truck / Driver pickers below) ──
+// root: element containing .ss-input (visible search box), .ss-value (hidden
+// input actually submitted), and .ss-list (the results dropdown).
+// items: [{value, label, sub, disabled, ...extra}]
+function mountSearchSelect(root, items, onPick) {
+  const input=root.querySelector('.ss-input'), hidden=root.querySelector('.ss-value'), list=root.querySelector('.ss-list');
+  let hiIdx=-1;
+  const filtered=()=>{
+    const q=(input.value||'').trim().toLowerCase();
+    if(!q) return items;
+    return items.filter(it=>it.label.toLowerCase().includes(q));
+  };
+  const draw=()=>{
+    const rows=filtered();
+    if(!rows.length){ list.innerHTML='<div class="ss-empty">No matches</div>'; list.classList.add('open'); return; }
+    list.innerHTML=rows.map((it,idx)=>`<div class="ss-item${it.disabled?' disabled':''}${idx===hiIdx?' hi':''}" data-idx="${idx}"><span>${esc(it.label)}</span>${it.sub?`<span class="ss-tag">${esc(it.sub)}</span>`:''}</div>`).join('');
+    list.classList.add('open');
+    list.querySelectorAll('.ss-item').forEach(el=>{
+      el.addEventListener('mousedown', e=>{
+        e.preventDefault();
+        const it=rows[Number(el.getAttribute('data-idx'))];
+        if(it.disabled) return;
+        pick(it);
+      });
+    });
+  };
+  const pick=(it)=>{
+    hidden.value=it.value; input.value=it.label; list.classList.remove('open');
+    if(onPick) onPick(it);
+  };
+  input.addEventListener('focus', ()=>{ hiIdx=-1; draw(); });
+  input.addEventListener('input', ()=>{ hidden.value=''; hiIdx=-1; draw(); });
+  input.addEventListener('blur', ()=>{ setTimeout(()=>list.classList.remove('open'),150); });
+  input.addEventListener('keydown', e=>{
+    const rows=filtered();
+    if(e.key==='ArrowDown'){ e.preventDefault(); hiIdx=Math.min(rows.length-1,hiIdx+1); draw(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); hiIdx=Math.max(0,hiIdx-1); draw(); }
+    else if(e.key==='Enter'){ e.preventDefault(); if(rows[hiIdx]&&!rows[hiIdx].disabled) pick(rows[hiIdx]); }
+    else if(e.key==='Escape'){ list.classList.remove('open'); }
+  });
+  return {
+    setValue(value){
+      const it=items.find(x=>x.value===value);
+      if(it){ hidden.value=it.value; input.value=it.label; } else { hidden.value=''; input.value=''; }
+      return it;
+    },
+    getValue(){ return hidden.value; }
+  };
+}
+
 function buildCycleRows() {
   const count=Number(qs('dcCnt').value)||1;
   const o=(APP.activeOrders||[]).find(x=>x.orderId===qs('dcOrder').value);
   if(!o) return toast('Select an order first.',true);
-  const tOpts='<option value="">&#8212; Truck &#8212;</option>'+(APP.availableTrucks||[]).map(t=>`<option data-cap="${t.cap}" value="${esc(t.no)}">${esc(t.no)} (${t.cap} CFT)</option>`).join('');
+
+  const truckItems=(APP.availableTrucks||[]).map(t=>({value:t.no,label:`${t.no} (${t.cap} CFT)`,cap:t.cap}));
+
   const driverList = APP.allDrivers || APP.availableDrivers || [];
   const ri2 = APP.driverRestInfo || {};
   const availDrvSet = new Set((APP.availableDrivers||[]).map(d=>String(d).trim()));
-  const dOpts='<option value="">&#8212; Driver &#8212;</option>'+driverList.map(d=>{
-    const rest = ri2[String(d).trim()];
-    const avail = availDrvSet.has(String(d).trim());
-    if(rest) return `<option value="${esc(d)}" disabled style="color:#888">${esc(d)} (rest ${rest.minLeft}m)</option>`;
-    if(!avail) return `<option value="${esc(d)}" disabled style="color:#888">${esc(d)} (busy)</option>`;
-    return `<option value="${esc(d)}">${esc(d)}</option>`;
-  }).join('');
-  const ctOpts=(APP.structureTypes||[]).length
-    ? APP.structureTypes.map(t=>`<option value="${esc(t)}">${structureIcon(t)} ${esc(t)}</option>`).join('')
-    : '<option value="Pump">&#128667; Pump</option><option value="Head Cast">&#127959; Head Cast</option><option value="Direct">&#128200; Direct</option>';
+  const profileMap = {};
+  (APP.driverProfiles||[]).forEach(p=>{ profileMap[p.name]=p; });
+  // Driver Name shown as "Name - Enroll" (e.g. "Ratul - 568858") when an
+  // Enrollment No. is on file; falls back to the plain name otherwise.
+  const driverItems = driverList.map(d=>{
+    const name=String(d).trim();
+    const profile=profileMap[name];
+    const label=(profile&&profile.enroll) ? `${profile.name} - ${profile.enroll}` : name;
+    const rest=ri2[name], avail=availDrvSet.has(name);
+    let sub='', disabled=false;
+    if(rest){ sub=`rest ${rest.minLeft}m`; disabled=true; }
+    else if(!avail){ sub='busy'; disabled=true; }
+    return {value:name, label, sub, disabled};
+  });
+
+  const castSuggestions=(APP.structureTypes||['Pump','Head Cast','Direct']).map(t=>`<option value="${esc(t)}">`).join('');
+
   let html='';
   for(let i=0;i<count;i++){
     html+=`<div class="ar" id="cr_${i}" style="grid-template-columns:1.2fr 1.2fr .7fr .8fr">
-      <div class="fi"><label>Truck ${i+1}</label><select class="ct" onchange="afc(${i},this)">${tOpts}</select></div>
-      <div class="fi"><label>Driver ${i+1}</label><select class="cd">${dOpts}</select></div>
+      <div class="fi"><label>Truck ${i+1}</label>
+        <div class="ss-wrap" id="crT_${i}"><input type="text" class="ss-input" placeholder="Search truck..." autocomplete="off"><input type="hidden" class="ss-value ct"><div class="ss-list"></div></div>
+      </div>
+      <div class="fi"><label>Driver ${i+1}</label>
+        <div class="ss-wrap" id="crD_${i}"><input type="text" class="ss-input" placeholder="Search driver..." autocomplete="off"><input type="hidden" class="ss-value cd"><div class="ss-list"></div></div>
+      </div>
       <div class="fi"><label>Load (CFT)</label><input type="number" class="cq" placeholder="${Math.min(229,Math.round(o.remainingQty))}" min="1"></div>
-      <div class="fi"><label>Structure Type</label><select class="cc">${ctOpts}</select></div>
+      <div class="fi"><label>Structure Type</label><input type="text" class="cc" list="crCastList_${i}" placeholder="e.g. Pump" value="Pump"><datalist id="crCastList_${i}">${castSuggestions}</datalist></div>
     </div>`;
   }
   qs('dcRows').innerHTML=html; qs('dcPanel').style.display='block';
-}
 
-function afc(i, sel) {
-  const cap=sel.options[sel.selectedIndex].getAttribute('data-cap');
-  if(cap) document.querySelector(`#cr_${i} .cq`).value=cap;
+  // Wire up the searchable pickers, and auto-select an available truck per
+  // row (still fully editable — pick a different truck any time before
+  // submitting). Each row gets a distinct truck so rows don't collide.
+  for(let i=0;i<count;i++){
+    const ssT = mountSearchSelect(qs(`crT_${i}`), truckItems, it=>{
+      document.querySelector(`#cr_${i} .cq`).value = it.cap;
+    });
+    mountSearchSelect(qs(`crD_${i}`), driverItems, ()=>{});
+    const autoTruck = truckItems[i];
+    if(autoTruck){
+      ssT.setValue(autoTruck.value);
+      document.querySelector(`#cr_${i} .cq`).value = autoTruck.cap;
+    }
+  }
 }
 
 async function submitCycle() {
