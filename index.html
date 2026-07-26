@@ -454,7 +454,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <span id="geoIcon"></span><span id="geoMsg"></span>
             </div>
             <div class="fg2">
-              <div class="fi"><label>Order No (SO Challan No)</label><input id="ocDoNo" type="text" list="ocDoNoList" placeholder="e.g. SO0720262295" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"><datalist id="ocDoNoList"></datalist></div>
+              <div class="fi"><label>Order No (DO Challan No)</label><input id="ocDoNo" type="text" list="ocDoNoList" placeholder="e.g. SO0720262295" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"><datalist id="ocDoNoList"></datalist></div>
               <div class="fi"><label>Client</label><select id="ocClient"><option value="">Select client...</option></select></div>
               <div class="fi s2"><label>Delivery Address <span style="color:var(--dim);font-weight:400;text-transform:none">(from DDL sheet &mdash; editable)</span></label><input id="ocAddr" type="text" placeholder="Auto&#8209;fills on client select"></div>
               <div class="fi"><label>SKU / Grade</label><select id="ocSku"><option value="">Select SKU...</option></select></div>
@@ -640,7 +640,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
               <b style="color:var(--gold)">How it works:</b><br>
               Driver submits Bangla form &#8594; Response saved to sheet &#8594; GAS trigger auto-processes &#8594; Centralized Data updated &#8594; Dashboard refreshes
               <br><br>
-              <b style="color:var(--gold)">Trigger:</b> Must set <code style="background:var(--ink3);padding:1px 5px;border-radius:3px">onFormSubmit</code> as a Form Submit trigger in Apps .
+              <b style="color:var(--gold)">Trigger:</b> Must set <code style="background:var(--ink3);padding:1px 5px;border-radius:3px">onFormSubmit</code> as a Form Submit trigger in Apps Script.
             </div>
           </div>
         </div>
@@ -851,7 +851,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 </div>
 <div id="toast"></div>
 
-<>
+<script>
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
