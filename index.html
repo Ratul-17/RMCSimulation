@@ -358,7 +358,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
   <div class="hdr-r" style="gap:10px">
     <button id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark" style="background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:6px 11px;color:var(--sub);font-size:14px;cursor:pointer;transition:var(--trans)" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--sub)'">&#9790;</button>
     <button id="adminBtn" onclick="adminBtnClick()" title="Admin login" style="background:var(--ink3);border:1px solid var(--edge);border-radius:var(--r);padding:6px 13px;color:var(--sub);font-size:12.5px;font-weight:700;letter-spacing:.03em;cursor:pointer;transition:var(--trans)">&#128100; ADMIN LOGIN</button>
-    <div class="pulse-dot" id="liveDot" title="Live — auto-updating every 20s">LIVE</div>
+    <div class="pulse-dot">LIVE</div>
   </div>
 </header>
 
@@ -746,6 +746,12 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
             <div class="pn"><div class="pnh"><div class="pnt">Driver Performance</div></div><div class="tw"><table id="repDriverTbl"><thead><tr><th>Driver</th><th>Trips</th><th>Qty (CFT)</th></tr></thead><tbody></tbody></table></div></div>
             <div class="pn"><div class="pnh"><div class="pnt">Top Clients</div></div><div class="tw"><table id="repClientTbl"><thead><tr><th>Client</th><th>Qty (CFT)</th></tr></thead><tbody></tbody></table></div></div>
           </div>
+
+          <div class="pn admin-only" style="display:none;margin-top:15px">
+            <div class="pnh"><div class="pnt">Available Drivers — Not Dispatched in This Period</div><span class="pbg" id="repAvailBadge">0</span></div>
+            <div style="color:var(--sub);font-size:12px;padding:0 4px 10px">Drivers in Driver Master who had no logged trip between <span id="repAvailRange">the selected dates</span>. Useful for spotting idle capacity or planning the next dispatch.</div>
+            <div class="tw"><table id="repAvailTbl"><thead><tr><th>Driver</th><th>Enroll</th><th>Truck No.</th><th>Weekly Offday</th></tr></thead><tbody></tbody></table></div>
+          </div>
         </div>
       </div>
 
@@ -893,69 +899,6 @@ async function withBusy(fn) {
     clearBusy();
     BUSY = false;
   }
-}
-
-// ─────────────────────────────────────────────────────────────
-// LIVE AUTO-REFRESH — the app used to only ever load fresh data once, at
-// page load (boot()); everything else needed a manual browser reload. This
-// polls the backend on a timer and quietly re-renders whatever is safe to
-// re-render, so new data (an admin action, a driver's Bangla Form
-// submission, anything else written to the sheets) shows up on its own.
-//
-// Deliberately conservative about WHAT it auto-refreshes:
-//   - Live Dashboard (renderDashboard) is pure read-only display → always safe.
-//   - Dropdown option lists (buildDropdowns) → safe, and now preserves
-//     whatever the user already picked/typed (see buildDropdowns above).
-//   - Driver Form Log → safe (read-only table), refreshed only while that
-//     tab is actually open.
-// It deliberately does NOT touch: Master Data tables (each row is a live
-// inline-editable form — a background rebuild would wipe an unsaved edit),
-// Dispatch Cycles' built rows (an in-progress truck/driver assignment),
-// Reports (an explicit, filtered "Run Report" snapshot), or the Capacity /
-// May-18 simulators (their own self-contained tools). Those simply pick up
-// fresh data the next time the user opens/reruns them, same as before.
-// Also fully skipped while BUSY (a submit is in flight) or while the browser
-// tab is in the background, to avoid wasted calls and any chance of a race
-// with a user-initiated write.
-// ─────────────────────────────────────────────────────────────
-const AUTO_REFRESH_MS = 20000; // 20s — live enough to feel dynamic, gentle on Apps Script/Sheets quota
-let autoRefreshTimer = null;
-let autoRefreshInFlight = false;
-
-async function silentRefresh() {
-  if (BUSY || autoRefreshInFlight || document.hidden) return;
-  autoRefreshInFlight = true;
-  try {
-    APP = await gs('getBootstrapData');
-    buildDropdowns();
-    renderDashboard();
-    const activeTab = document.querySelector('.sec.on')?.id;
-    if (activeTab === 'formlog') {
-      try { const data = await gs('getFormLogData'); renderFormLog(data); } catch (e) { /* stay quiet in the background */ }
-    }
-    markLiveRefreshed(true);
-  } catch (err) {
-    markLiveRefreshed(false); // don't toast — a background hiccup shouldn't interrupt the user
-  } finally {
-    autoRefreshInFlight = false;
-  }
-}
-
-function markLiveRefreshed(ok) {
-  const dot = qs('liveDot');
-  if (!dot) return;
-  const t = new Date();
-  const stamp = t.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-  dot.title = ok ? ('Live — last updated ' + stamp) : ('Live — last refresh attempt failed at ' + stamp + ' (will keep retrying)');
-  dot.style.opacity = ok ? '1' : '.55';
-}
-
-function startAutoRefresh() {
-  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-  autoRefreshTimer = setInterval(silentRefresh, AUTO_REFRESH_MS);
-  // Also refresh immediately the moment the tab becomes visible again,
-  // so switching back from another window/tab feels instantly up to date.
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) silentRefresh(); });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1169,6 +1112,12 @@ async function runReport() {
   toast('Loading report...');
   try {
     REP = await gs('getReportData', {fromDate, toDate});
+    // Admins also get the full driver roster refreshed, so "Available Drivers"
+    // below is accurate even if Master Data was never opened this session.
+    if (ADMIN.token) {
+      try { MASTER.drivers = await gs('getDriverMasterData', {token: ADMIN.token}) || []; }
+      catch(e) { /* non-fatal — panel just shows what it already has, or stays empty */ }
+    }
     renderReport();
     toast('&#10003; Report loaded.');
   } catch(err) { toast(err.message, true); }
@@ -1211,6 +1160,34 @@ function renderReport() {
   qs('repDriverTbl').querySelector('tbody').innerHTML = dd.length ? dd.map(r=>`<tr><td>${esc(r.driver)}</td><td>${r.trips}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim)">No data.</td></tr>';
   const cc=REP.topClients||[];
   qs('repClientTbl').querySelector('tbody').innerHTML = cc.length ? cc.map(r=>`<tr><td>${esc(r.client)}</td><td>${bdtF(r.qty)}</td></tr>`).join('') : '<tr><td colspan="2" style="color:var(--dim)">No data.</td></tr>';
+
+  renderAvailableDrivers();
+}
+
+// Drivers on the master roster who logged zero trips in the report's date
+// range — i.e. sat idle / were never dispatched during that period.
+// Pure client-side diff (Driver Master roster minus REP.driverSummary names),
+// so it stays in sync with whatever report is currently loaded with no extra
+// backend calls beyond the one already made in runReport().
+function renderAvailableDrivers() {
+  const tbl = qs('repAvailTbl');
+  if (!tbl) return;
+  const rangeEl = qs('repAvailRange');
+  if (rangeEl) rangeEl.textContent = (qs('repFrom').value && qs('repTo').value) ? `${qs('repFrom').value} → ${qs('repTo').value}` : 'the selected dates';
+
+  const norm = s => String(s||'').trim().toLowerCase();
+  const dispatched = new Set((REP.driverSummary||[]).map(r => norm(r.driver)));
+  const roster = MASTER.drivers || [];
+  const available = roster.filter(d => d.name && !dispatched.has(norm(d.name)));
+
+  const badge = qs('repAvailBadge');
+  if (badge) badge.textContent = available.length;
+
+  tbl.querySelector('tbody').innerHTML = available.length
+    ? available.map(d => `<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.enroll||'—')}</td><td>${esc(d.truckNo||'—')}</td><td>${esc(d.offday||'—')}</td></tr>`).join('')
+    : (roster.length
+        ? '<tr><td colspan="4" style="color:var(--dim)">Every driver on the roster had at least one trip in this period.</td></tr>'
+        : '<tr><td colspan="4" style="color:var(--dim)">Open Master Data once this session to load the driver roster, then re-run the report.</td></tr>');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1555,16 +1532,6 @@ function structureIcon(name) {
 }
 function buildDropdowns() {
   const s = v => `<option value="${esc(v)}">${esc(v)}</option>`;
-  // Auto-refresh (see silentRefresh()) calls this repeatedly in the background
-  // while the user may already have picked a value in one of these <select>s
-  // (e.g. mid Order Creation, or mid Dispatch Cycles). Preserve whatever is
-  // currently selected/typed across the innerHTML rebuild so a background
-  // data refresh never yanks the user's in-progress choice out from under them.
-  const keep = id => { const el = qs(id); return el ? el.value : ''; };
-  const restore = (id, val) => { const el = qs(id); if (el && val && [...el.options].some(o=>o.value===val)) el.value = val; };
-
-  const ocClientVal=keep('ocClient'), ocSkuVal=keep('ocSku'), ocSalesVal=keep('ocSales'), dcOrderVal=keep('dcOrder'), iiTripVal=keep('iiTrip');
-
   if(qs('ocClient')) qs('ocClient').innerHTML='<option value="">Select client...</option>'+(APP.clients||[]).map(s).join('');
   if(qs('ocSku'))    qs('ocSku').innerHTML   ='<option value="">Select SKU...</option>'  +(APP.skus||[]).map(s).join('');
   if(qs('ocSales'))  qs('ocSales').innerHTML ='<option value="">Select sales person...</option>'+(APP.salesPersons||[]).map(s).join('');
@@ -1583,9 +1550,6 @@ function buildDropdowns() {
   if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
   // FIXED: Populate driver dropdown on Dispatch cycle rows using allDrivers (full list, not just available)
   // allDrivers is now returned from getBootstrapData() for use in form driver selections
-
-  restore('ocClient', ocClientVal); restore('ocSku', ocSkuVal); restore('ocSales', ocSalesVal);
-  restore('dcOrder', dcOrderVal); restore('iiTrip', iiTripVal);
 }
 
 function renderDashboard() {
@@ -2162,8 +2126,6 @@ async function boot() {
     toast('&#10003; Dashboard loaded.');
     const savedUrl = localStorage.getItem('armcl_form_url');
     if (savedUrl) { qs('formUrlInput').value=savedUrl; qs('formLinkBox').textContent=savedUrl; qs('formSetupBadge').textContent='Form Linked ✓'; qs('formSetupBadge').className='tg tok'; }
-    markLiveRefreshed(true);
-    startAutoRefresh();
   } catch(err) { toast('Load failed: '+err.message, true); }
 }
 
