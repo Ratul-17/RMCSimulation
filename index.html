@@ -856,7 +856,7 @@ hr{border:none;border-top:1px solid var(--edge);margin:14px 0}
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbwSU7TWRcSLP-CX85z_2HWV_68Cstdv7fnHcZGq5fUS4ELP86wJi2eIVeAwN9PH5ISU/exec"; // PASTE URL HERE
+const API = "https://script.google.com/macros/s/AKfycbwZFZEW2x5qcuo2MoANaGr3PZRe7q_ERHDVUeHUugUtuSUv7UtLkRaelpASXz2nmGWhGQ/exec"; // PASTE URL HERE
 const PLANT_LAT = 23.886798363152327, PLANT_LON = 90.35946324417702;
 const NOMINATIM  = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=";
 
@@ -1578,8 +1578,9 @@ function buildDropdowns() {
   }
   if(qs('dcOrder'))  qs('dcOrder').innerHTML ='<option value="">Select active order...</option>'+(APP.activeOrders||[]).map(o=>`<option value="${esc(o.orderId)}">[${esc(o.orderId)}${o.doChallanNo?' · '+esc(o.doChallanNo):''}] ${esc(o.client)} — Rem: ${bdtF(o.remainingQty)} CFT</option>`).join('');
   // Type-ahead suggestions for Order No (DO Challan No) — previously used
-  // values, purely a convenience; any correctly-formatted value can still be
-  // typed fresh (uniqueness is enforced server-side, not by this list).
+  // values, offered as a convenience. Reusing one is expected: the same SO
+  // number can legitimately cover several separate orders, so this list is
+  // just for fast entry, not a uniqueness hint.
   if(qs('ocDoNoList')) qs('ocDoNoList').innerHTML = [...new Set((APP.activeOrders||[]).map(o=>o.doChallanNo).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join('');
   if(qs('iiTrip'))   qs('iiTrip').innerHTML  ='<option value="">Select active trip...</option>'+(APP.activeTrips||[]).map(t=>`<option value="${t.rowNo}">Row ${t.rowNo} | [${esc(t.orderId)}] | ${esc(t.client||'')} | ${esc(t.truck)} | ${esc(t.driver)} | ${t.status}</option>`).join('');
   // FIXED: Populate driver dropdown on Dispatch cycle rows using allDrivers (full list, not just available)
@@ -1805,7 +1806,10 @@ async function proceedWithCoords(destLat, destLon, address, ovr, btn, geoFailed)
 // Order No / DO Challan No format: "SO" + digits only (e.g. SO0720262295).
 // Length isn't fixed (challan numbers vary), but the SO-prefix-then-digits
 // shape is required — checked here so a bad value never even reaches the
-// backend, which enforces the same rule (and uniqueness) again server-side.
+// backend, which enforces the same format rule again server-side. The same
+// SO number is allowed to be used on more than one order (one DO Challan can
+// legitimately cover several dispatches) — only the system-generated Order
+// No (ORD-XXX) has to be unique, and that's handled separately, automatically.
 const DO_CHALLAN_RE = /^SO\d+$/;
 
 async function saveMasterOrder() {
